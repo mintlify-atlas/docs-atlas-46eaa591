@@ -97,6 +97,7 @@
             "pages": [
               "api/library/data-loader",
               "api/library/calculate-cost",
+              "api/library/debug",
               "api/library/logger"
             ]
           }

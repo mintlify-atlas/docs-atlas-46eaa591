@@ -1,0 +1,194 @@
+---
+title: Debug
+description: Debug utilities for cost calculation validation and pricing mismatch detection
+---
+
+The debug module provides utilities for detecting and analyzing mismatches between pre-calculated costs (from Claude Code's costUSD field) and costs calculated from token usage and model pricing.
+
+## Import
+
+```typescript
+import { detectMismatches, printMismatchReport } from 'ccusage/debug';
+```
+
+## Functions
+
+### detectMismatches
+
+Analyzes usage data to detect pricing mismatches between stored and calculated costs.
+
+```typescript
+async function detectMismatches(
+  claudePath?: string
+): Promise<MismatchStats>
+```
+
+<ParamField path="claudePath" type="string" optional>
+  Optional path to Claude data directory. If not provided, uses the default Claude data directory.
+</ParamField>
+
+<ResponseField name="returns" type="Promise<MismatchStats>">
+  Statistics about pricing mismatches found in the usage data.
+</ResponseField>
+
+#### MismatchStats Type
+
+<ResponseField name="totalEntries" type="number">
+  Total number of usage entries analyzed
+</ResponseField>
+
+<ResponseField name="entriesWithBoth" type="number">
+  Number of entries that have both pre-calculated cost and model information
+</ResponseField>
+
+<ResponseField name="matches" type="number">
+  Number of entries where calculated cost matches stored cost (within threshold)
+</ResponseField>
+
+<ResponseField name="mismatches" type="number">
+  Number of entries where calculated cost differs from stored cost
+</ResponseField>
+
+<ResponseField name="discrepancies" type="Discrepancy[]">
+  Array of detailed discrepancy information for mismatched entries
+</ResponseField>
+
+<ResponseField name="modelStats" type="Map<string, ModelStats>">
+  Per-model statistics showing match/mismatch rates and average percentage differences
+</ResponseField>
+
+<ResponseField name="versionStats" type="Map<string, VersionStats>">
+  Per-version statistics showing match/mismatch rates across different Claude Code versions
+</ResponseField>
+
+### printMismatchReport
+
+Prints a formatted report of pricing mismatches to the console.
+
+```typescript
+function printMismatchReport(
+  stats: MismatchStats,
+  sampleCount?: number
+): void
+```
+
+<ParamField path="stats" type="MismatchStats" required>
+  The mismatch statistics returned from `detectMismatches()`
+</ParamField>
+
+<ParamField path="sampleCount" type="number" default="5">
+  Number of sample discrepancies to display in the report
+</ParamField>
+
+## Usage Examples
+
+### Basic Mismatch Detection
+
+Detect and print pricing mismatches from the default Claude data directory:
+
+```typescript
+import { detectMismatches, printMismatchReport } from 'ccusage/debug';
+
+// Analyze usage data for pricing mismatches
+const stats = await detectMismatches();
+
+// Print a report with 10 sample discrepancies
+printMismatchReport(stats, 10);
+```
+
+### Custom Path Analysis
+
+Analyze usage data from a custom directory:
+
+```typescript
+import { detectMismatches, printMismatchReport } from 'ccusage/debug';
+
+const customPath = '/path/to/claude/projects';
+const stats = await detectMismatches(customPath);
+
+console.log(`Total entries: ${stats.totalEntries}`);
+console.log(`Matches: ${stats.matches}`);
+console.log(`Mismatches: ${stats.mismatches}`);
+console.log(`Match rate: ${(stats.matches / stats.entriesWithBoth * 100).toFixed(2)}%`);
+
+// Print detailed report
+printMismatchReport(stats);
+```
+
+### Programmatic Analysis
+
+Process mismatch data programmatically:
+
+```typescript
+import { detectMismatches } from 'ccusage/debug';
+
+const stats = await detectMismatches();
+
+// Analyze per-model statistics
+for (const [model, modelStats] of stats.modelStats.entries()) {
+  const matchRate = (modelStats.matches / modelStats.total * 100).toFixed(2);
+  console.log(`${model}:`);
+  console.log(`  Total: ${modelStats.total}`);
+  console.log(`  Match rate: ${matchRate}%`);
+  console.log(`  Avg diff: ${modelStats.avgPercentDiff.toFixed(2)}%`);
+}
+
+// Find largest discrepancies
+const topDiscrepancies = stats.discrepancies
+  .sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference))
+  .slice(0, 5);
+
+console.log('\nTop 5 discrepancies:');
+for (const disc of topDiscrepancies) {
+  console.log(`${disc.model} at ${disc.timestamp}:`);
+  console.log(`  Original: $${disc.originalCost.toFixed(6)}`);
+  console.log(`  Calculated: $${disc.calculatedCost.toFixed(6)}`);
+  console.log(`  Difference: $${disc.difference.toFixed(6)} (${disc.percentDiff.toFixed(2)}%)`);
+}
+```
+
+### Integration with CLI
+
+The `--debug` flag in CLI commands uses this module internally:
+
+```bash
+# Show pricing mismatches in CLI output
+npx ccusage daily --debug
+
+# Control number of samples shown
+npx ccusage daily --debug --debug-samples 10
+```
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Cost validation" icon="check">
+    Verify that calculated costs match Claude Code's reported costs
+  </Card>
+  
+  <Card title="Pricing analysis" icon="chart-line">
+    Identify patterns in pricing discrepancies across models and versions
+  </Card>
+  
+  <Card title="Data quality" icon="database">
+    Detect potential issues in usage data or pricing calculations
+  </Card>
+  
+  <Card title="Model comparison" icon="scale-balanced">
+    Compare pricing accuracy across different Claude models
+  </Card>
+</CardGroup>
+
+## Match Threshold
+
+The module uses a configurable threshold to determine matches. By default, costs within **0.1%** of each other are considered matches. This accounts for minor floating-point precision differences.
+
+<Tip>
+The match threshold can be adjusted via the `DEBUG_MATCH_THRESHOLD_PERCENT` constant in the source code if you need stricter or looser matching.
+</Tip>
+
+## Related Documentation
+
+- [Cost Calculation Modes](/advanced/cost-modes) - Understanding auto/calculate/display modes
+- [CLI Options](/configuration/cli-options) - Using --debug flag in CLI commands
+- [Data Loader](/api/library/data-loader) - Loading usage data for analysis

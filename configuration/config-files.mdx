@@ -1,0 +1,245 @@
+---
+title: Configuration Files
+description: JSON configuration files for setting default options and command-specific settings
+---
+
+ccusage supports JSON configuration files to set default options for all commands or specific commands. This eliminates the need to specify common flags repeatedly.
+
+## File Discovery
+
+ccusage automatically searches for configuration files in the following locations (highest priority first):
+
+1. **Local project config**: `.ccusage/ccusage.json` in current directory
+2. **User config directories**: `ccusage.json` in Claude data directories
+   - `~/.config/claude/ccusage.json` (XDG config directory)
+   - `~/.claude/ccusage.json` (legacy directory)
+   - Custom paths from `CLAUDE_CONFIG_DIR` environment variable
+
+<Info>The first valid configuration file found is used. Lower priority locations are ignored.</Info>
+
+## File Format
+
+Configuration files use JSON format with optional schema validation:
+
+<CodeGroup>
+```json Basic structure
+{
+  "$schema": "https://ccusage.com/config-schema.json",
+  "defaults": {
+    // Options applied to all commands
+  },
+  "commands": {
+    "daily": {
+      // Options specific to 'daily' command
+    },
+    "monthly": {
+      // Options specific to 'monthly' command
+    }
+  }
+}
+```
+
+```json Minimal config
+{
+  "defaults": {
+    "json": true,
+    "offline": true
+  }
+}
+```
+</CodeGroup>
+
+## Schema
+
+<ParamField path="$schema" type="string">
+  Optional JSON schema URL for IDE validation and autocomplete.
+  
+  ```json
+  {
+    "$schema": "https://ccusage.com/config-schema.json"
+  }
+  ```
+</ParamField>
+
+<ParamField path="defaults" type="object">
+  Default options applied to all commands. Any CLI option can be set here.
+  
+  ```json
+  {
+    "defaults": {
+      "mode": "calculate",
+      "offline": true,
+      "timezone": "UTC",
+      "locale": "en-US"
+    }
+  }
+  ```
+</ParamField>
+
+<ParamField path="commands" type="object">
+  Command-specific options that override defaults. Keys are command names (daily, monthly, session, blocks, statusline).
+  
+  ```json
+  {
+    "commands": {
+      "daily": {
+        "breakdown": true,
+        "order": "desc"
+      },
+      "monthly": {
+        "json": true
+      }
+    }
+  }
+  ```
+</ParamField>
+
+## Priority Order
+
+Options are merged with the following priority (highest to lowest):
+
+1. **CLI arguments** - Explicitly provided flags
+2. **Command config** - Command-specific settings in config file
+3. **Defaults config** - Default settings in config file
+4. **Built-in defaults** - Framework defaults
+
+<Note>Only explicitly provided CLI arguments override config settings. Default values from argument definitions do not override config.</Note>
+
+## Examples
+
+### Development Configuration
+
+For local development with offline mode and debugging:
+
+```json .ccusage/ccusage.json
+{
+  "$schema": "https://ccusage.com/config-schema.json",
+  "defaults": {
+    "offline": true,
+    "debug": true,
+    "mode": "calculate",
+    "timezone": "UTC"
+  },
+  "commands": {
+    "daily": {
+      "breakdown": true,
+      "order": "desc"
+    },
+    "blocks": {
+      "tokenLimit": 500000
+    }
+  }
+}
+```
+
+### Production Configuration
+
+For production environments with JSON output:
+
+```json ~/.config/claude/ccusage.json
+{
+  "defaults": {
+    "json": true,
+    "noColor": true,
+    "mode": "auto"
+  },
+  "commands": {
+    "daily": {
+      "order": "asc"
+    },
+    "monthly": {
+      "breakdown": false
+    }
+  }
+}
+```
+
+### Timezone-Specific Configuration
+
+For users in different timezones:
+
+```json ~/.claude/ccusage.json
+{
+  "defaults": {
+    "timezone": "America/New_York",
+    "locale": "en-US"
+  },
+  "commands": {
+    "daily": {
+      "breakdown": true
+    }
+  }
+}
+```
+
+### Minimal Configuration
+
+Simple config with just a few common options:
+
+```json .ccusage/ccusage.json
+{
+  "defaults": {
+    "offline": true,
+    "breakdown": true
+  }
+}
+```
+
+## Using Custom Config Path
+
+You can specify a custom configuration file location:
+
+```bash
+# Use specific config file
+ccusage daily --config /path/to/custom-config.json
+
+# Debug mode to see which config is loaded
+ccusage daily --debug
+```
+
+## Validation
+
+ccusage validates configuration files during loading:
+
+- **Valid structure**: Must be valid JSON with correct schema
+- **Type checking**: Options must have correct types (boolean, string, number)
+- **Graceful errors**: Invalid files are skipped with warnings
+
+<CodeGroup>
+```json Valid config
+{
+  "defaults": {
+    "json": true,
+    "mode": "auto"
+  }
+}
+```
+
+```json Invalid config
+{
+  "defaults": "invalid-type",  // Should be object
+  "commands": {
+    "daily": "invalid"  // Should be object
+  }
+}
+```
+</CodeGroup>
+
+## Available Options
+
+All CLI options can be used in config files. Common options include:
+
+- `json` (boolean) - JSON output format
+- `mode` (string) - Cost calculation mode: auto, calculate, display
+- `offline` (boolean) - Use cached pricing data
+- `breakdown` (boolean) - Show per-model breakdown
+- `order` (string) - Sort order: asc, desc
+- `timezone` (string) - Timezone for date grouping
+- `locale` (string) - Locale for formatting
+- `debug` (boolean) - Enable debug output
+- `debugSamples` (number) - Number of debug samples
+- `color` (boolean) - Enable colored output
+- `noColor` (boolean) - Disable colored output
+- `compact` (boolean) - Compact display mode
+
+See [CLI Options](/configuration/cli-options) for complete option documentation.

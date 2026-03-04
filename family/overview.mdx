@@ -1,0 +1,125 @@
+---
+title: ccusage Family
+description: A suite of related tools for tracking usage across AI coding assistants
+---
+
+# ccusage Family
+
+The ccusage family is a suite of CLI tools designed to track token usage and costs across various AI coding assistants. All tools share the same powerful reporting features and beautiful terminal output.
+
+<CardGroup cols={2}>
+  <Card title="ccusage" icon="chart-line" href="https://www.npmjs.com/package/ccusage">
+    Main CLI tool for analyzing Claude Code usage from local JSONL files
+  </Card>
+  
+  <Card title="@ccusage/codex" icon="robot" href="/family/codex">
+    OpenAI Codex usage analyzer with GPT-5 support
+  </Card>
+  
+  <Card title="@ccusage/opencode" icon="rocket" href="/family/opencode">
+    OpenCode usage analyzer for tracking sessions
+  </Card>
+  
+  <Card title="@ccusage/pi" icon="pie-chart" href="/family/pi">
+    Pi-agent usage analyzer for alternative Claude agent
+  </Card>
+  
+  <Card title="@ccusage/amp" icon="bolt" href="/family/amp">
+    Amp usage analyzer with credits tracking
+  </Card>
+  
+  <Card title="@ccusage/mcp" icon="plug" href="/family/mcp">
+    MCP server for real-time integration with Claude Desktop
+  </Card>
+</CardGroup>
+
+## Common Features
+
+All tools in the ccusage family share these powerful features:
+
+- **Daily Reports** - View token usage and costs aggregated by date
+- **Monthly Reports** - View usage grouped by month
+- **Session Reports** - Analyze individual conversation sessions
+- **Model Tracking** - See which AI models you're using
+- **Cost Calculation** - Accurate USD cost estimates using LiteLLM pricing
+- **Cache Token Support** - Track cache creation and cache read tokens separately
+- **JSON Output** - Export data in structured JSON format with `--json`
+- **Beautiful Tables** - Colorful terminal output with automatic responsive layout
+- **Compact Mode** - Use `--compact` flag for narrow terminals
+- **Offline Support** - Use cached pricing data without network connectivity
+
+## Installation
+
+All ccusage family tools can be run directly without installation using `npx` or `bunx`:
+
+<CodeGroup>
+```bash ccusage (Claude Code)
+npx ccusage@latest
+```
+
+```bash codex (OpenAI Codex)
+npx @ccusage/codex@latest
+```
+
+```bash opencode (OpenCode)
+npx @ccusage/opencode@latest
+```
+
+```bash pi (pi-agent)
+npx @ccusage/pi@latest
+```
+
+```bash amp (Amp)
+npx @ccusage/amp@latest
+```
+
+```bash mcp (MCP Server)
+npx @ccusage/mcp@latest
+```
+</CodeGroup>
+
+<Info>
+  We recommend always using `@latest` suffix to ensure you get the newest version with the latest features and bug fixes.
+</Info>
+
+## Shell Aliases
+
+Since the scoped package names can be long, we recommend setting up shell aliases:
+
+```bash
+# bash/zsh
+alias ccusage-codex='bunx @ccusage/codex@latest'
+alias ccusage-opencode='bunx @ccusage/opencode@latest'
+alias ccusage-pi='bunx @ccusage/pi@latest'
+alias ccusage-amp='bunx @ccusage/amp@latest'
+
+# fish
+alias ccusage-codex 'bunx @ccusage/codex@latest'
+alias ccusage-opencode 'bunx @ccusage/opencode@latest'
+alias ccusage-pi 'bunx @ccusage/pi@latest'
+alias ccusage-amp 'bunx @ccusage/amp@latest'
+```
+
+## Use Cases
+
+Each tool is designed for specific AI coding assistants:
+
+| Tool | Use Case | Data Source |
+|------|----------|-------------|
+| **ccusage** | Track Claude Code token usage and costs | `~/.claude/projects/` or `~/.config/claude/projects/` |
+| **@ccusage/codex** | Monitor OpenAI Codex sessions with GPT-5 support | `~/.codex/sessions/` |
+| **@ccusage/opencode** | Analyze OpenCode session usage and costs | `~/.local/share/opencode/` |
+| **@ccusage/pi** | Track pi-agent sessions (alternative Claude agent) | `~/.pi/agent/sessions/` |
+| **@ccusage/amp** | Monitor Amp CLI usage with credits tracking | `~/.local/share/amp/threads/` |
+| **@ccusage/mcp** | Real-time integration with Claude Desktop via MCP | All supported tools |
+
+## Learn More
+
+Explore the individual tool pages for detailed usage instructions and examples:
+
+- [ccusage](/introduction) - Main tool documentation
+- [@ccusage/codex](/family/codex) - OpenAI Codex analyzer
+- [@ccusage/opencode](/family/opencode) - OpenCode analyzer
+- [@ccusage/pi](/family/pi) - Pi-agent analyzer
+- [@ccusage/amp](/family/amp) - Amp analyzer
+- [@ccusage/mcp](/family/mcp) - MCP server integration

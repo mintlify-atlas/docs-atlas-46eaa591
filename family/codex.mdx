@@ -1,0 +1,200 @@
+---
+title: '@ccusage/codex'
+description: Usage analyzer for OpenAI Codex with GPT-5 support
+---
+
+# @ccusage/codex
+
+Analyze [OpenAI Codex CLI](https://github.com/openai/codex) usage logs with the same reporting experience as ccusage. Track token usage, costs, and sessions for GPT-5 and other OpenAI models.
+
+<Info>
+  **Beta**: The Codex CLI support is experimental. Expect breaking changes until the upstream Codex tooling stabilizes.
+</Info>
+
+## Quick Start
+
+<CodeGroup>
+```bash npx
+npx @ccusage/codex@latest --help
+```
+
+```bash bunx
+bunx @ccusage/codex@latest --help
+```
+
+```bash pnpm
+pnpm dlx @ccusage/codex
+```
+
+```bash deno
+deno run -E -R=$HOME/.codex/ -S=homedir -N='raw.githubusercontent.com:443' npm:@ccusage/codex@latest --help
+```
+</CodeGroup>
+
+<Warning>
+  **Critical for bunx users**: Bun 1.2.x's bunx prioritizes binaries matching the package name suffix. If you have an existing `codex` command installed (e.g., GitHub Copilot's codex), **always use `bunx @ccusage/codex@latest`** with the version tag.
+</Warning>
+
+## Installation
+
+### Shell Alias (Recommended)
+
+Since `npx @ccusage/codex@latest` is quite long to type repeatedly, set up a shell alias:
+
+<CodeGroup>
+```bash bash/zsh
+alias ccusage-codex='bunx @ccusage/codex@latest'
+```
+
+```bash fish
+alias ccusage-codex 'bunx @ccusage/codex@latest'
+```
+</CodeGroup>
+
+Then simply run:
+
+```bash
+ccusage-codex daily
+ccusage-codex monthly --json
+```
+
+## Data Source
+
+The CLI looks for Codex session JSONL files under:
+
+- **Default**: `~/.codex/sessions/`
+- **Custom**: Set `CODEX_HOME` environment variable
+
+Each JSONL line is an `event_msg` with `payload.type === "token_count"` containing usage data.
+
+## Common Commands
+
+### Daily Usage Report
+
+View token usage and costs grouped by date:
+
+```bash
+npx @ccusage/codex@latest daily
+```
+
+### Date Range Filtering
+
+Filter reports by specific date ranges:
+
+```bash
+npx @ccusage/codex@latest daily --since 20250911 --until 20250917
+```
+
+### JSON Output
+
+Export structured data for scripting or integration:
+
+```bash
+npx @ccusage/codex@latest daily --json
+```
+
+### Monthly Report
+
+View usage aggregated by month:
+
+```bash
+npx @ccusage/codex@latest monthly
+npx @ccusage/codex@latest monthly --json
+```
+
+### Session Report
+
+Detailed breakdown by individual sessions:
+
+```bash
+npx @ccusage/codex@latest sessions
+```
+
+## Token Fields
+
+The analyzer tracks these token types:
+
+| Field | Description | Billing |
+|-------|-------------|----------|
+| `input_tokens` | Prompt tokens sent this turn | Priced at input rate minus cached share |
+| `cached_input_tokens` | Prompt tokens from cache | Priced at cached input rate (cheaper) |
+| `output_tokens` | Completion tokens including reasoning | Priced at output rate |
+| `reasoning_output_tokens` | Structured reasoning breakdown | Informational only (included in output) |
+| `total_tokens` | Cumulative total | Sum of input + output |
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Responsive Tables" icon="table">
+    Beautiful terminal tables shared with the ccusage CLI
+  </Card>
+  
+  <Card title="Offline Pricing" icon="cloud-arrow-down">
+    Offline-first pricing cache with automatic LiteLLM refresh
+  </Card>
+  
+  <Card title="Per-Model Tracking" icon="microchip">
+    Token and cost aggregation by model, including cached tokens
+  </Card>
+  
+  <Card title="Multiple Reports" icon="chart-mixed">
+    Daily, monthly, and session rollups with identical CLI options
+  </Card>
+</CardGroup>
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|----------|
+| `CODEX_HOME` | Override root directory for Codex sessions | `~/.codex` |
+| `LOG_LEVEL` | Control log verbosity (0 silent … 5 trace) | - |
+
+## Model Support
+
+### GPT-5 and Aliases
+
+The CLI supports GPT-5 models and automatically resolves aliases:
+
+- `gpt-5-codex` → Maps to LiteLLM's `gpt-5` pricing
+- `gpt-5` → 1M token context windows
+- Automatic fallback for legacy sessions without model metadata
+
+### Pricing Notes
+
+Example GPT-5 pricing (as of 2025-08-07):
+
+- **Input**: $1.25 per 1M tokens
+- **Cached Input**: $0.125 per 1M tokens (10x cheaper)
+- **Output**: $10 per 1M tokens
+
+<Info>
+  Sessions from early September 2025 that lack model metadata are treated as `gpt-5` and marked with `isFallback: true` in JSON output. Pricing for these sessions is approximate.
+</Info>
+
+## Legacy JSONL Handling
+
+For legacy JSONL files missing `turn_context` metadata:
+
+- Tokens are treated as `gpt-5` for visibility
+- Pricing is approximate (flagged in reports)
+- JSON output includes `"isFallback": true` on affected model entries
+
+## Links
+
+<CardGroup cols={2}>
+  <Card title="npm Package" icon="npm" href="https://www.npmjs.com/package/@ccusage/codex">
+    View on npm registry
+  </Card>
+  
+  <Card title="OpenAI Codex" icon="github" href="https://github.com/openai/codex">
+    Official Codex CLI repository
+  </Card>
+  
+  <Card title="ccusage Family" icon="layer-group" href="/family/overview">
+    Explore all related tools
+  </Card>
+  
+  <Card title="Main Documentation" icon="book" href="https://ccusage.com">
+    Full ccusage documentation
+  </Card>
+</CardGroup>

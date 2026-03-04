@@ -1,80 +1,222 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick start
+description: Get started with ccusage and run your first usage report in seconds
 ---
 
-## Get started in three steps
+## Your first report
 
-Get your documentation site running locally and make your first customization.
+Run your first usage report with the default daily view:
 
-### Step 1: Set up your local environment
+```bash
+npx ccusage@latest
+```
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+This displays a daily token usage report with:
+- Date-by-date breakdown of token usage
+- Input, output, cache creation, and cache read tokens
+- Total costs in USD
+- Models used for each day
+
+## Basic commands
+
+ccusage provides several report types to analyze your usage:
+
+<Steps>
+  <Step title="Daily report">
+    View token usage and costs aggregated by date:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    ```bash
+    npx ccusage daily
+    ```
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    This is the default command when you run `ccusage` without arguments.
+  </Step>
+  
+  <Step title="Monthly report">
+    View token usage and costs aggregated by month:
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash
+    npx ccusage monthly
+    ```
+    
+    Perfect for understanding your long-term usage patterns.
+  </Step>
+  
+  <Step title="Session report">
+    View usage grouped by conversation sessions:
+    
+    ```bash
+    npx ccusage session
+    ```
+    
+    Ideal for tracking costs per project or conversation.
+  </Step>
+  
+  <Step title="5-hour blocks">
+    Track usage within Claude's billing windows:
+    
+    ```bash
+    npx ccusage blocks
+    ```
+    
+    Shows your usage in 5-hour billing cycles with active block monitoring.
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Common options
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+### Filter by date range
 
-### Step 3: Go live
+Filter reports to a specific date range using `--since` and `--until`:
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+```bash
+# View usage from May 25 to May 30, 2025
+npx ccusage daily --since 20250525 --until 20250530
+```
+
+<Note>
+  Date filters use YYYYMMDD format (e.g., 20250525 for May 25, 2025).
+</Note>
+
+### JSON output
+
+Export data in JSON format for programmatic consumption:
+
+```bash
+npx ccusage daily --json
+```
+
+Example output:
+
+```json
+{
+  "daily": [
+    {
+      "date": "2025-05-25",
+      "inputTokens": 15234,
+      "outputTokens": 8912,
+      "cacheCreationTokens": 2341,
+      "cacheReadTokens": 4521,
+      "totalTokens": 31008,
+      "totalCost": 0.45,
+      "modelsUsed": ["claude-sonnet-4-20250514"]
+    }
+  ],
+  "totals": {
+    "inputTokens": 15234,
+    "outputTokens": 8912,
+    "cacheCreationTokens": 2341,
+    "cacheReadTokens": 4521,
+    "totalTokens": 31008,
+    "totalCost": 0.45
+  }
+}
+```
+
+### Model breakdown
+
+View per-model cost breakdown with the `--breakdown` flag:
+
+```bash
+npx ccusage daily --breakdown
+```
+
+This adds additional rows showing token usage and costs for each model (e.g., Opus, Sonnet) separately.
+
+### Compact mode
+
+Force compact table layout, perfect for narrow terminals or screenshots:
+
+```bash
+npx ccusage daily --compact
+```
+
+<Tip>
+  ccusage automatically detects terminal width and switches to compact mode for terminals narrower than 100 characters.
+</Tip>
+
+## Project analysis
+
+### Group by project
+
+View usage breakdown by project or instance:
+
+```bash
+npx ccusage daily --instances
+```
+
+This groups the report by project directories, making it easy to track costs per project.
+
+### Filter to specific project
+
+Filter the report to a specific project:
+
+```bash
+npx ccusage daily --project myproject
+```
+
+Combine with `--instances` for detailed project analysis:
+
+```bash
+npx ccusage daily --instances --project myproject --json
+```
+
+## Advanced options
+
+### Timezone configuration
+
+Configure timezone for date grouping:
+
+```bash
+npx ccusage daily --timezone UTC
+npx ccusage daily --timezone America/New_York
+```
+
+### Locale formatting
+
+Customize date/time formatting with locale:
+
+```bash
+npx ccusage daily --locale ja-JP
+npx ccusage daily --locale de-DE
+```
+
+### Offline mode
+
+Use pre-cached pricing data without network connectivity (Claude models only):
+
+```bash
+npx ccusage daily --offline
+```
+
+## Statusline integration
+
+ccusage includes a compact statusline mode for integration with Claude Code status bar hooks:
+
+```bash
+npx ccusage statusline
+```
+
+<Note>
+  The statusline feature is currently in Beta. It provides a compact usage display optimized for status bars.
+</Note>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Daily reports" icon="calendar" href="/features/daily-reports">
+    Learn more about daily usage reports and filtering options
+  </Card>
+  
+  <Card title="Session tracking" icon="messages" href="/features/session-reports">
+    Understand session-based usage analysis
+  </Card>
+  
+  <Card title="MCP integration" icon="plug" href="/advanced/mcp-server">
+    Set up the MCP server for Claude Desktop integration
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/configuration/config-files">
+    Configure ccusage with JSON configuration files
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

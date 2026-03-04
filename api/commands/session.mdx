@@ -1,0 +1,252 @@
+---
+title: session
+description: Show usage report grouped by conversation session
+---
+
+## Overview
+
+The `session` command displays Claude Code usage statistics grouped by conversation sessions. Each session represents an individual conversation or coding session with Claude, identified by a unique session ID.
+
+## Usage
+
+<CodeGroup>
+```bash List all sessions
+ccusage session
+```
+
+```bash View specific session details
+ccusage session --id abc123-def456
+```
+
+```bash Filter by date range
+ccusage session --since 20240301 --until 20240331
+```
+
+```bash JSON output
+ccusage session --json
+```
+
+```bash With model breakdown
+ccusage session --breakdown
+```
+</CodeGroup>
+
+## Flags
+
+### Command-Specific Flags
+
+<ParamField path="--id" type="string">
+  Load usage data for a specific session ID. Shows detailed information for a single session instead of listing all sessions.
+  
+  **Short flag:** `-i`
+  
+  **Example:** `ccusage session --id abc123-def456`
+</ParamField>
+
+### Common Flags
+
+<ParamField path="--since" type="string">
+  Filter from date in YYYYMMDD format (e.g., 20240301).
+  
+  **Short flag:** `-s`
+</ParamField>
+
+<ParamField path="--until" type="string">
+  Filter until date in YYYYMMDD format (e.g., 20240331).
+  
+  **Short flag:** `-u`
+</ParamField>
+
+<ParamField path="--json" type="boolean" default="false">
+  Output in JSON format instead of a formatted table.
+  
+  **Short flag:** `-j`
+</ParamField>
+
+<ParamField path="--jq" type="string">
+  Process JSON output with jq command. Requires jq binary installed. Implies --json.
+  
+  **Short flag:** `-q`
+  
+  **Example:** `ccusage session --jq '.sessions[] | select(.totalCost > 1.0)'`
+</ParamField>
+
+<ParamField path="--mode" type="enum" default="auto">
+  Cost calculation mode:
+  - `auto`: Use costUSD if exists, otherwise calculate from tokens
+  - `calculate`: Always calculate costs from token counts
+  - `display`: Always use pre-calculated costUSD values
+  
+  **Short flag:** `-m`
+  
+  **Choices:** `auto`, `calculate`, `display`
+</ParamField>
+
+<ParamField path="--breakdown" type="boolean" default="false">
+  Show per-model cost breakdown. Displays detailed token usage for each model used.
+  
+  **Short flag:** `-b`
+</ParamField>
+
+<ParamField path="--offline" type="boolean" default="false">
+  Use cached pricing data for Claude models instead of fetching from API.
+  
+  **Short flag:** `-O`
+  
+  **Negatable:** Use `--no-offline` to disable
+</ParamField>
+
+<ParamField path="--debug" type="boolean" default="false">
+  Show pricing mismatch information for debugging.
+  
+  **Short flag:** `-d`
+</ParamField>
+
+<ParamField path="--debug-samples" type="number" default="5">
+  Number of sample discrepancies to show in debug output.
+</ParamField>
+
+<ParamField path="--timezone" type="string">
+  Timezone for date grouping (e.g., UTC, America/New_York, Asia/Tokyo). Default: system timezone.
+  
+  **Short flag:** `-z`
+</ParamField>
+
+<ParamField path="--locale" type="string" default="en-US">
+  Locale for date/time formatting (e.g., en-US, ja-JP, de-DE).
+  
+  **Short flag:** `-l`
+</ParamField>
+
+<ParamField path="--compact" type="boolean" default="false">
+  Force compact mode for narrow displays (better for screenshots).
+</ParamField>
+
+<ParamField path="--config" type="string">
+  Path to configuration file. Default: auto-discovery.
+</ParamField>
+
+<ParamField path="--color" type="boolean">
+  Enable colored output (default: auto). FORCE_COLOR=1 has the same effect.
+</ParamField>
+
+<ParamField path="--no-color" type="boolean">
+  Disable colored output (default: auto). NO_COLOR=1 has the same effect.
+</ParamField>
+
+## Output Formats
+
+### Table Output (Default)
+
+Displays a formatted table with columns:
+- **Session**: Last two parts of session ID (for brevity)
+- **Input**: Input tokens
+- **Output**: Output tokens
+- **Cache Creation**: Cache creation tokens
+- **Cache Read**: Cache read tokens
+- **Total**: Total tokens
+- **Cost**: Total cost in USD
+- **Models**: Models used in session
+- **Last Activity**: Timestamp of last activity in session
+
+Includes a totals row at the bottom.
+
+<Note>
+  In narrow terminals or with `--compact` flag, some columns (cache metrics and total tokens) may be hidden. A message will indicate compact mode is active.
+</Note>
+
+### JSON Output
+
+With `--json` flag, outputs structured JSON:
+
+```json
+{
+  "sessions": [
+    {
+      "sessionId": "abc123-def456-ghi789",
+      "inputTokens": 125000,
+      "outputTokens": 15000,
+      "cacheCreationTokens": 50000,
+      "cacheReadTokens": 10000,
+      "totalTokens": 200000,
+      "totalCost": 0.85,
+      "lastActivity": "2024-03-15T14:30:00.000Z",
+      "modelsUsed": ["claude-sonnet-4-20250514"],
+      "modelBreakdowns": [
+        {
+          "model": "claude-sonnet-4-20250514",
+          "inputTokens": 125000,
+          "outputTokens": 15000,
+          "cacheCreationTokens": 50000,
+          "cacheReadTokens": 10000,
+          "totalCost": 0.85
+        }
+      ],
+      "projectPath": "/home/user/projects/myproject"
+    }
+  ],
+  "totals": {
+    "inputTokens": 125000,
+    "outputTokens": 15000,
+    "cacheCreationTokens": 50000,
+    "cacheReadTokens": 10000,
+    "totalTokens": 200000,
+    "totalCost": 0.85
+  }
+}
+```
+
+## Examples
+
+### List all sessions
+
+```bash
+ccusage session
+```
+
+### View specific session details
+
+```bash
+ccusage session --id abc123-def456-ghi789
+```
+
+### Filter sessions from March 2024
+
+```bash
+ccusage session --since 20240301 --until 20240331
+```
+
+### Export session data to JSON
+
+```bash
+ccusage session --json > session-usage.json
+```
+
+### Show detailed model breakdown per session
+
+```bash
+ccusage session --breakdown
+```
+
+### Find expensive sessions using jq
+
+```bash
+ccusage session --jq '.sessions[] | select(.totalCost > 1) | {sessionId, totalCost}'
+```
+
+### Get total cost of all sessions
+
+```bash
+ccusage session --jq '.totals.totalCost'
+```
+
+## Session ID Format
+
+Session IDs are unique identifiers assigned by Claude Code to each conversation. They typically follow a UUID-like format with multiple hyphen-separated segments. The table view shows only the last two segments for readability, but the full ID is available in JSON output and when using `--id`.
+
+## Related Commands
+
+- [daily](/api/commands/daily) - View usage grouped by day
+- [monthly](/api/commands/monthly) - View usage grouped by month
+- [weekly](/api/commands/weekly) - View usage grouped by week
+- [blocks](/api/commands/blocks) - View usage by 5-hour billing blocks

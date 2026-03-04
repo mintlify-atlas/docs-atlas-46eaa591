@@ -1,0 +1,355 @@
+---
+title: Billing Blocks
+description: Track usage in 5-hour billing cycles with active block monitoring
+---
+
+<img src="https://cdn.jsdelivr.net/gh/ryoppippi/ccusage@main/docs/public/blocks-live.png" alt="ccusage blocks report showing active billing block" />
+
+The `blocks` command groups your Claude Code usage into 5-hour billing blocks, helping you track costs within Claude's billing cycle periods.
+
+## Basic Usage
+
+```bash
+ccusage blocks
+```
+
+This displays a table showing:
+
+- Block start time
+- Duration/status (active, elapsed time, or gap)
+- Models used
+- Total tokens consumed
+- Cost in USD
+- Percentage of token limit (if specified)
+
+## Command Options
+
+### Active Block Only
+
+View only the currently active billing block with projections:
+
+```bash
+ccusage blocks --active
+```
+
+This shows detailed information about the active block including:
+
+- Current usage
+- Burn rate (tokens/minute, cost/hour)
+- Projected usage if current rate continues
+- Token limit status (if specified)
+
+### Recent Blocks
+
+Show blocks from the last 3 days:
+
+```bash
+ccusage blocks --recent
+```
+
+<Tip>
+Combine `--recent` with `--token-limit` to monitor your quota across recent billing blocks.
+</Tip>
+
+### Token Limit Tracking
+
+Set a token limit to see quota warnings:
+
+```bash
+ccusage blocks --token-limit 500000
+```
+
+Or use the maximum from previous blocks:
+
+```bash
+ccusage blocks --token-limit max
+```
+
+This adds a percentage column showing how close each block is to the limit.
+
+### Custom Session Duration
+
+Change the billing block duration (default: 5 hours):
+
+```bash
+ccusage blocks --session-length 3
+```
+
+<Note>
+Claude Code uses 5-hour billing blocks by default. Only change `--session-length` if you're tracking custom time periods.
+</Note>
+
+### Filter by Date Range
+
+View blocks within a specific date range:
+
+```bash
+ccusage blocks --since 20250301 --until 20250307
+```
+
+### JSON Output
+
+Export data in JSON format:
+
+```bash
+ccusage blocks --json
+```
+
+<CodeGroup>
+```json Standard Output
+{
+  "blocks": [
+    {
+      "id": "block-1",
+      "startTime": "2025-03-15T10:00:00.000Z",
+      "endTime": "2025-03-15T15:00:00.000Z",
+      "actualEndTime": "2025-03-15T12:30:00.000Z",
+      "isActive": false,
+      "isGap": false,
+      "entries": 45,
+      "tokenCounts": {
+        "inputTokens": 45230,
+        "outputTokens": 12450,
+        "cacheCreationTokens": 8900,
+        "cacheReadTokens": 125000
+      },
+      "totalTokens": 191580,
+      "costUSD": 0.45,
+      "models": ["claude-sonnet-4-20250514"],
+      "burnRate": null,
+      "projection": null
+    }
+  ]
+}
+```
+
+```json Active Block
+{
+  "blocks": [
+    {
+      "id": "block-2",
+      "isActive": true,
+      "burnRate": {
+        "tokensPerMinute": 850,
+        "costPerHour": 0.12
+      },
+      "projection": {
+        "totalTokens": 255000,
+        "totalCost": 0.60
+      },
+      "tokenLimitStatus": {
+        "limit": 500000,
+        "projectedUsage": 255000,
+        "percentUsed": 51.0,
+        "status": "ok"
+      }
+    }
+  ]
+}
+```
+</CodeGroup>
+
+### jq Integration
+
+Process JSON output with jq:
+
+```bash
+ccusage blocks --jq '.blocks[] | select(.isActive == true)'
+```
+
+## Common Flags
+
+<ResponseField name="--active, -a" type="boolean">
+  Show only active block with projections (default: false)
+</ResponseField>
+
+<ResponseField name="--recent, -r" type="boolean">
+  Show blocks from last 3 days including active (default: false)
+</ResponseField>
+
+<ResponseField name="--token-limit, -t" type="string">
+  Token limit for quota warnings (e.g., 500000 or "max")
+</ResponseField>
+
+<ResponseField name="--session-length, -n" type="number">
+  Session block duration in hours (default: 5)
+</ResponseField>
+
+<ResponseField name="--since, -s" type="string">
+  Filter from date (YYYYMMDD format)
+</ResponseField>
+
+<ResponseField name="--until, -u" type="string">
+  Filter until date (YYYYMMDD format)
+</ResponseField>
+
+<ResponseField name="--order, -o" type="enum">
+  Sort order: `desc` (newest first) or `asc` (oldest first). Default: asc
+</ResponseField>
+
+<ResponseField name="--json, -j" type="boolean">
+  Output in JSON format (default: false)
+</ResponseField>
+
+<ResponseField name="--jq, -q" type="string">
+  Process JSON output with jq command (requires jq binary, implies --json)
+</ResponseField>
+
+<ResponseField name="--mode, -m" type="enum">
+  Cost calculation mode: `auto` (use pre-calculated if available), `calculate` (always calculate from tokens), `display` (always use pre-calculated)
+</ResponseField>
+
+<ResponseField name="--timezone, -z" type="string">
+  Timezone for date grouping (e.g., UTC, America/New_York, Asia/Tokyo). Default: system timezone
+</ResponseField>
+
+<ResponseField name="--locale, -l" type="string">
+  Locale for date/time formatting (e.g., en-US, ja-JP, de-DE). Default: en-US
+</ResponseField>
+
+<ResponseField name="--compact" type="boolean">
+  Force compact mode for narrow displays
+</ResponseField>
+
+<ResponseField name="--offline, -O" type="boolean">
+  Use cached pricing data instead of fetching from API (default: false)
+</ResponseField>
+
+<ResponseField name="--debug, -d" type="boolean">
+  Show pricing mismatch information for debugging (default: false)
+</ResponseField>
+
+## Examples
+
+### Monitor Active Block
+
+```bash
+ccusage blocks --active --token-limit max
+```
+
+### Recent Blocks with Limit
+
+```bash
+ccusage blocks --recent --token-limit 500000
+```
+
+### Blocks This Week
+
+```bash
+ccusage blocks --since 20250310 --until 20250316
+```
+
+### High-Cost Blocks
+
+```bash
+ccusage blocks --jq '.blocks[] | select(.costUSD > 1.0) | {startTime, costUSD}'
+```
+
+### Export Block Data
+
+```bash
+ccusage blocks --json > blocks.json
+```
+
+## Understanding Billing Blocks
+
+### 5-Hour Cycles
+
+Claude Code bills usage in 5-hour blocks. When you start a session:
+
+1. A new 5-hour block begins
+2. All usage in that period is billed together
+3. Gaps between blocks (inactive periods) are shown in gray
+4. A new block starts when you resume activity
+
+### Active Block
+
+The active block is the current billing period where you're accumulating usage. It shows:
+
+- **Elapsed time**: How long the block has been running
+- **Remaining time**: Time left in the 5-hour window
+- **Current usage**: Tokens and costs so far
+- **Burn rate**: Current rate of token consumption
+- **Projection**: Estimated total if current rate continues
+
+### Gaps
+
+Inactive periods between blocks are shown as "gaps" in gray:
+
+```
+(inactive) - (24h gap)
+```
+
+These don't consume tokens or incur costs.
+
+### Projections
+
+For active blocks, ccusage projects final usage based on current burn rate:
+
+```
+PROJECTED    255,000 tokens    $0.60
+```
+
+<Warning>
+Projections assume your current burn rate continues. Actual usage may vary based on your activity.
+</Warning>
+
+### Token Limit Status
+
+When `--token-limit` is set, ccusage shows:
+
+- **Limit**: Your specified token quota
+- **Current Usage**: Tokens used so far
+- **Remaining**: Tokens left in quota
+- **Projected Usage**: Estimated final usage percentage
+- **Status**: Color-coded warning level
+  - 🟢 Green: Under 80% of limit (OK)
+  - 🟡 Yellow: 80-100% of limit (WARNING)
+  - 🔴 Red: Over 100% of limit (EXCEEDS LIMIT)
+
+## Use Cases
+
+### Real-Time Monitoring
+
+Check your current billing block status:
+
+```bash
+ccusage blocks --active
+```
+
+### Quota Management
+
+Track usage against your token limit:
+
+```bash
+ccusage blocks --recent --token-limit 500000
+```
+
+### Cost Prediction
+
+See projected costs for the active block:
+
+```bash
+ccusage blocks --active
+```
+
+The projection shows estimated final cost if current burn rate continues.
+
+### Historical Analysis
+
+Analyze past billing blocks:
+
+```bash
+ccusage blocks --since 20250301 --until 20250331
+```
+
+## Compact Mode
+
+In narrow terminals or with `--compact`, time information is shown in a condensed format:
+
+```
+03/15 10:00
+(2h30m)
+```
+
+Expand your terminal width to see full timestamps and details.

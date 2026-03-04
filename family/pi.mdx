@@ -1,0 +1,203 @@
+---
+title: '@ccusage/pi'
+description: Usage analyzer for pi-agent sessions
+---
+
+# @ccusage/pi
+
+Analyze [pi-agent](https://github.com/badlogic/pi-mono) session usage with the same reporting experience as ccusage. Track token usage and costs from your pi-agent sessions with daily, monthly, and session-based reports.
+
+## What is pi-agent?
+
+[Pi-agent](https://github.com/badlogic/pi-mono) is an alternative Claude coding agent. It stores usage data in a similar JSONL format to Claude Code but in a different directory structure.
+
+## Quick Start
+
+<CodeGroup>
+```bash npx
+npx @ccusage/pi@latest --help
+```
+
+```bash bunx
+bunx @ccusage/pi@latest --help
+```
+
+```bash pnpm
+pnpm dlx @ccusage/pi
+```
+</CodeGroup>
+
+## Installation
+
+### Shell Alias (Recommended)
+
+Since `npx @ccusage/pi@latest` is quite long to type repeatedly, set up a shell alias:
+
+<CodeGroup>
+```bash bash/zsh
+alias ccusage-pi='bunx @ccusage/pi@latest'
+```
+
+```bash fish
+alias ccusage-pi 'bunx @ccusage/pi@latest'
+```
+</CodeGroup>
+
+Then simply run:
+
+```bash
+ccusage-pi daily
+ccusage-pi monthly --json
+```
+
+## Data Source
+
+The CLI reads pi-agent session data from:
+
+- **Default**: `~/.pi/agent/sessions/`
+- **Custom**: Set `PI_AGENT_DIR` environment variable or use `--pi-path` flag
+
+Pi-agent uses JSONL files similar to Claude Code, making it easy to track usage across sessions.
+
+## Common Commands
+
+### Daily Usage Report
+
+View token usage and costs grouped by date:
+
+```bash
+npx @ccusage/pi@latest daily
+```
+
+### Monthly Report
+
+View usage aggregated by month:
+
+```bash
+npx @ccusage/pi@latest monthly
+```
+
+### Session Report
+
+Detailed breakdown by individual sessions:
+
+```bash
+npx @ccusage/pi@latest session
+```
+
+### JSON Output
+
+Export structured data for scripting:
+
+```bash
+npx @ccusage/pi@latest daily --json
+```
+
+### Custom Path
+
+Specify a custom pi-agent sessions directory:
+
+```bash
+npx @ccusage/pi@latest daily --pi-path /path/to/sessions
+```
+
+### Date Range Filtering
+
+Filter reports by specific date ranges:
+
+```bash
+npx @ccusage/pi@latest daily --since 2025-12-01 --until 2025-12-19
+```
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Daily Reports" icon="calendar-day">
+    Same reporting options as ccusage for daily tracking
+  </Card>
+  
+  <Card title="Monthly Reports" icon="calendar">
+    Aggregate usage by month for budget tracking
+  </Card>
+  
+  <Card title="Session Reports" icon="comments">
+    Detailed breakdown by individual conversation sessions
+  </Card>
+  
+  <Card title="Accurate Costs" icon="dollar-sign">
+    Uses LiteLLM pricing database for accurate cost calculation
+  </Card>
+  
+  <Card title="JSON Output" icon="code">
+    Export data in structured JSON format with --json
+  </Card>
+  
+  <Card title="Compact Mode" icon="compress">
+    Use --compact flag for narrow terminals, perfect for screenshots
+  </Card>
+</CardGroup>
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|----------|
+| `PI_AGENT_DIR` | Override pi-agent sessions directory | `~/.pi/agent/sessions/` |
+| `LOG_LEVEL` | Control log verbosity (0 silent … 5 trace) | - |
+
+## Use Cases
+
+### Budget Tracking
+
+Track your pi-agent usage costs over time:
+
+```bash
+ccusage-pi monthly --json > usage.json
+```
+
+### Session Analysis
+
+Analyze individual sessions to understand costs per conversation:
+
+```bash
+ccusage-pi session
+```
+
+### Date Range Reports
+
+Generate reports for specific time periods:
+
+```bash
+ccusage-pi daily --since 2025-12-01 --until 2025-12-31
+```
+
+## Comparison with Other Tools
+
+While pi-agent uses similar JSONL format to Claude Code, the directory structure differs:
+
+| Tool | Data Location | Format |
+|------|---------------|--------|
+| **Claude Code** | `~/.claude/projects/` | JSONL per session |
+| **pi-agent** | `~/.pi/agent/sessions/` | JSONL per session |
+| **OpenCode** | `~/.local/share/opencode/` | JSON per message |
+
+The `@ccusage/pi` tool handles pi-agent's specific directory structure while providing the same reporting capabilities.
+
+## Links
+
+<CardGroup cols={2}>
+  <Card title="npm Package" icon="npm" href="https://www.npmjs.com/package/@ccusage/pi">
+    View on npm registry
+  </Card>
+  
+  <Card title="pi-agent" icon="github" href="https://github.com/badlogic/pi-mono">
+    Official pi-agent repository
+  </Card>
+  
+  <Card title="ccusage Family" icon="layer-group" href="/family/overview">
+    Explore all related tools
+  </Card>
+  
+  <Card title="Main Documentation" icon="book" href="https://ccusage.com">
+    Full ccusage documentation
+  </Card>
+</CardGroup>

@@ -1,0 +1,239 @@
+---
+title: Daily Reports
+description: Track your Claude Code usage with detailed daily breakdowns
+---
+
+<img src="https://cdn.jsdelivr.net/gh/ryoppippi/ccusage@main/docs/public/screenshot.png" alt="ccusage daily report output" />
+
+The `daily` command groups your Claude Code usage by date, providing a comprehensive view of your token consumption and costs over time.
+
+## Basic Usage
+
+```bash
+ccusage daily
+```
+
+This displays a table showing your usage for each day, including:
+
+- Input and output tokens
+- Cache creation and read tokens
+- Total tokens consumed
+- Total cost in USD
+- Models used
+
+## Command Options
+
+### Filter by Date Range
+
+Use `--since` and `--until` to filter results to a specific date range:
+
+```bash
+ccusage daily --since 20250301 --until 20250307
+```
+
+<Note>
+Dates must be in `YYYYMMDD` format (e.g., `20250315` for March 15, 2025).
+</Note>
+
+### Project-Level Breakdown
+
+View usage broken down by project with the `--instances` flag:
+
+```bash
+ccusage daily --instances
+```
+
+This groups usage by project directory and displays them in separate sections.
+
+### Filter by Project
+
+Focus on a specific project:
+
+```bash
+ccusage daily --project myproject
+```
+
+### Model Breakdown
+
+See per-model costs within each day:
+
+```bash
+ccusage daily --breakdown
+```
+
+This shows detailed token usage and costs for each model used on each day.
+
+### JSON Output
+
+Export data in JSON format for programmatic processing:
+
+```bash
+ccusage daily --json
+```
+
+<CodeGroup>
+```json Standard Output
+{
+  "daily": [
+    {
+      "date": "20250315",
+      "inputTokens": 45230,
+      "outputTokens": 12450,
+      "cacheCreationTokens": 8900,
+      "cacheReadTokens": 125000,
+      "totalTokens": 191580,
+      "totalCost": 0.45,
+      "modelsUsed": ["claude-sonnet-4-20250514"],
+      "modelBreakdowns": [...]
+    }
+  ],
+  "totals": {
+    "inputTokens": 45230,
+    "outputTokens": 12450,
+    "cacheCreationTokens": 8900,
+    "cacheReadTokens": 125000,
+    "totalTokens": 191580,
+    "totalCost": 0.45
+  }
+}
+```
+
+```json With --instances
+{
+  "projects": {
+    "myproject": [
+      {
+        "date": "20250315",
+        "inputTokens": 45230,
+        "outputTokens": 12450,
+        "totalCost": 0.45,
+        "project": "myproject"
+      }
+    ]
+  },
+  "totals": {...}
+}
+```
+</CodeGroup>
+
+### jq Integration
+
+Process JSON output with jq for advanced filtering:
+
+```bash
+ccusage daily --jq '.daily[] | select(.totalCost > 0.5)'
+```
+
+<Tip>
+The `--jq` flag automatically implies `--json`, so you don't need both.
+</Tip>
+
+## Common Flags
+
+<ResponseField name="--since, -s" type="string">
+  Filter from date (YYYYMMDD format)
+</ResponseField>
+
+<ResponseField name="--until, -u" type="string">
+  Filter until date (YYYYMMDD format)
+</ResponseField>
+
+<ResponseField name="--instances, -i" type="boolean">
+  Show usage breakdown by project/instance (default: false)
+</ResponseField>
+
+<ResponseField name="--project, -p" type="string">
+  Filter to specific project name
+</ResponseField>
+
+<ResponseField name="--breakdown, -b" type="boolean">
+  Show per-model cost breakdown (default: false)
+</ResponseField>
+
+<ResponseField name="--json, -j" type="boolean">
+  Output in JSON format (default: false)
+</ResponseField>
+
+<ResponseField name="--jq, -q" type="string">
+  Process JSON output with jq command (requires jq binary, implies --json)
+</ResponseField>
+
+<ResponseField name="--mode, -m" type="enum">
+  Cost calculation mode: `auto` (use pre-calculated if available), `calculate` (always calculate from tokens), `display` (always use pre-calculated)
+</ResponseField>
+
+<ResponseField name="--timezone, -z" type="string">
+  Timezone for date grouping (e.g., UTC, America/New_York, Asia/Tokyo). Default: system timezone
+</ResponseField>
+
+<ResponseField name="--locale, -l" type="string">
+  Locale for date/time formatting (e.g., en-US, ja-JP, de-DE). Default: en-US
+</ResponseField>
+
+<ResponseField name="--compact" type="boolean">
+  Force compact mode for narrow displays (better for screenshots)
+</ResponseField>
+
+<ResponseField name="--offline, -O" type="boolean">
+  Use cached pricing data instead of fetching from API (default: false)
+</ResponseField>
+
+<ResponseField name="--debug, -d" type="boolean">
+  Show pricing mismatch information for debugging (default: false)
+</ResponseField>
+
+## Examples
+
+### Last Week's Usage
+
+```bash
+ccusage daily --since 20250308 --until 20250314
+```
+
+### March 2025 by Project
+
+```bash
+ccusage daily --since 20250301 --until 20250331 --instances
+```
+
+### Export Costs Above Threshold
+
+```bash
+ccusage daily --jq '.daily[] | select(.totalCost > 1.0) | {date, totalCost}'
+```
+
+### Detailed Model Analysis
+
+```bash
+ccusage daily --breakdown --since 20250315
+```
+
+## Understanding the Output
+
+### Token Types
+
+- **Input Tokens**: Tokens sent to Claude (prompts, code, context)
+- **Output Tokens**: Tokens generated by Claude (responses)
+- **Cache Creation Tokens**: Tokens used to create prompt cache entries
+- **Cache Read Tokens**: Tokens read from prompt cache (cheaper than input)
+
+### Cost Calculation
+
+By default (`--mode auto`), ccusage uses pre-calculated costs from Claude Code when available, falling back to calculating from token counts using LiteLLM pricing data.
+
+<Warning>
+If you see "No Claude usage data found", check that:
+1. You've used Claude Code in the specified date range
+2. Your Claude data directory is accessible at `~/.config/claude/` or `~/.claude/`
+3. The date format is correct (YYYYMMDD)
+</Warning>
+
+## Compact Mode
+
+When terminal width is limited, ccusage automatically switches to compact mode, hiding cache metrics and total tokens. You can force this mode with `--compact`:
+
+```bash
+ccusage daily --compact
+```
+
+This is useful for taking screenshots or working in narrow terminal windows.

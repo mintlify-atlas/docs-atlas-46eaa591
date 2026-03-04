@@ -1,0 +1,334 @@
+---
+title: JSON Output Format
+description: Export ccusage data in structured JSON format for programmatic consumption
+---
+
+All ccusage commands support the `--json` flag to output structured JSON data instead of formatted tables. This is useful for integrating ccusage into scripts, dashboards, or other tooling.
+
+## Basic Usage
+
+```bash
+ccusage daily --json
+ccusage monthly --json
+ccusage session --json
+ccusage blocks --json
+```
+
+## Output Structure
+
+### Daily Report JSON
+
+The daily command outputs an array of daily usage objects:
+
+```typescript
+type DailyProjectOutput = {
+  date: string;                    // Date in YYYY-MM-DD format
+  inputTokens: number;             // Total input tokens
+  outputTokens: number;            // Total output tokens
+  cacheCreationTokens: number;     // Cache creation tokens
+  cacheReadTokens: number;         // Cache read tokens
+  totalTokens: number;             // Sum of all token types
+  totalCost: number;               // Total cost in USD
+  modelsUsed: string[];            // Array of model names used
+  modelBreakdowns: ModelBreakdown[]; // Per-model cost breakdown
+};
+```
+
+<ResponseField name="date" type="string" required>
+  Date in YYYY-MM-DD format (e.g., "2025-03-04")
+</ResponseField>
+
+<ResponseField name="inputTokens" type="number" required>
+  Total number of input tokens processed on this date
+</ResponseField>
+
+<ResponseField name="outputTokens" type="number" required>
+  Total number of output tokens generated on this date
+</ResponseField>
+
+<ResponseField name="cacheCreationTokens" type="number" required>
+  Total number of tokens used for creating prompt cache
+</ResponseField>
+
+<ResponseField name="cacheReadTokens" type="number" required>
+  Total number of tokens read from prompt cache
+</ResponseField>
+
+<ResponseField name="totalTokens" type="number" required>
+  Sum of all token types (input + output + cacheCreation + cacheRead)
+</ResponseField>
+
+<ResponseField name="totalCost" type="number" required>
+  Total cost in USD for this date
+</ResponseField>
+
+<ResponseField name="modelsUsed" type="string[]" required>
+  Array of Claude model names used on this date (e.g., ["claude-sonnet-4-20250514"])
+</ResponseField>
+
+<ResponseField name="modelBreakdowns" type="ModelBreakdown[]" required>
+  Per-model cost and token breakdown (only included with `--breakdown` flag)
+</ResponseField>
+
+### Model Breakdown Structure
+
+```typescript
+type ModelBreakdown = {
+  model: string;              // Model name
+  inputTokens: number;        // Input tokens for this model
+  outputTokens: number;       // Output tokens for this model
+  cacheCreationTokens: number; // Cache creation tokens
+  cacheReadTokens: number;    // Cache read tokens
+  totalCost: number;          // Total cost for this model
+};
+```
+
+## Examples
+
+### Daily Report with Breakdown
+
+<CodeGroup>
+```bash Command
+ccusage daily --json --breakdown
+```
+
+```json Output
+[
+  {
+    "date": "2025-03-04",
+    "inputTokens": 15234,
+    "outputTokens": 8923,
+    "cacheCreationTokens": 2341,
+    "cacheReadTokens": 12567,
+    "totalTokens": 39065,
+    "totalCost": 0.0456,
+    "modelsUsed": [
+      "claude-sonnet-4-20250514"
+    ],
+    "modelBreakdowns": [
+      {
+        "model": "claude-sonnet-4-20250514",
+        "inputTokens": 15234,
+        "outputTokens": 8923,
+        "cacheCreationTokens": 2341,
+        "cacheReadTokens": 12567,
+        "totalCost": 0.0456
+      }
+    ]
+  },
+  {
+    "date": "2025-03-03",
+    "inputTokens": 22456,
+    "outputTokens": 13421,
+    "cacheCreationTokens": 3456,
+    "cacheReadTokens": 18923,
+    "totalTokens": 58256,
+    "totalCost": 0.0678,
+    "modelsUsed": [
+      "claude-sonnet-4-20250514",
+      "claude-opus-4-20250514"
+    ],
+    "modelBreakdowns": [
+      {
+        "model": "claude-sonnet-4-20250514",
+        "inputTokens": 12456,
+        "outputTokens": 7421,
+        "cacheCreationTokens": 1456,
+        "cacheReadTokens": 8923,
+        "totalCost": 0.0345
+      },
+      {
+        "model": "claude-opus-4-20250514",
+        "inputTokens": 10000,
+        "outputTokens": 6000,
+        "cacheCreationTokens": 2000,
+        "cacheReadTokens": 10000,
+        "totalCost": 0.0333
+      }
+    ]
+  }
+]
+```
+</CodeGroup>
+
+### Date Filtering
+
+<CodeGroup>
+```bash Command
+ccusage daily --json --since 20250301 --until 20250307
+```
+
+```json Output
+[
+  {
+    "date": "2025-03-04",
+    "inputTokens": 15234,
+    "outputTokens": 8923,
+    "cacheCreationTokens": 2341,
+    "cacheReadTokens": 12567,
+    "totalTokens": 39065,
+    "totalCost": 0.0456,
+    "modelsUsed": ["claude-sonnet-4-20250514"],
+    "modelBreakdowns": []
+  }
+]
+```
+</CodeGroup>
+
+### Project Grouping
+
+<CodeGroup>
+```bash Command
+ccusage daily --json --instances
+```
+
+```json Output
+{
+  "my-project": [
+    {
+      "date": "2025-03-04",
+      "inputTokens": 8234,
+      "outputTokens": 4923,
+      "cacheCreationTokens": 1341,
+      "cacheReadTokens": 6567,
+      "totalTokens": 21065,
+      "totalCost": 0.0256,
+      "modelsUsed": ["claude-sonnet-4-20250514"],
+      "modelBreakdowns": []
+    }
+  ],
+  "another-project": [
+    {
+      "date": "2025-03-04",
+      "inputTokens": 7000,
+      "outputTokens": 4000,
+      "cacheCreationTokens": 1000,
+      "cacheReadTokens": 6000,
+      "totalTokens": 18000,
+      "totalCost": 0.0200,
+      "modelsUsed": ["claude-sonnet-4-20250514"],
+      "modelBreakdowns": []
+    }
+  ]
+}
+```
+</CodeGroup>
+
+## Combining with jq
+
+The JSON output works well with [jq](https://jqlang.github.io/jq/) for filtering and processing:
+
+<CodeGroup>
+```bash Total Costs
+# Get total cost across all days
+ccusage daily --json | jq '[.[].totalCost] | add'
+```
+
+```bash Filter by Date
+# Get usage for a specific date
+ccusage daily --json | jq '.[] | select(.date == "2025-03-04")'
+```
+
+```bash Model Usage
+# List all unique models used
+ccusage daily --json | jq '[.[].modelsUsed[]] | unique'
+```
+
+```bash High Cost Days
+# Find days with cost > $0.05
+ccusage daily --json | jq '.[] | select(.totalCost > 0.05)'
+```
+</CodeGroup>
+
+## Integration Examples
+
+### Node.js Script
+
+```typescript
+import { execSync } from 'child_process';
+
+// Get daily usage data
+const output = execSync('ccusage daily --json', { encoding: 'utf8' });
+const dailyData = JSON.parse(output);
+
+// Calculate total cost
+const totalCost = dailyData.reduce((sum, day) => sum + day.totalCost, 0);
+console.log(`Total cost: $${totalCost.toFixed(4)}`);
+
+// Find highest usage day
+const highestDay = dailyData.reduce((max, day) => 
+  day.totalTokens > max.totalTokens ? day : max
+);
+console.log(`Highest usage: ${highestDay.date} (${highestDay.totalTokens} tokens)`);
+```
+
+### Python Script
+
+```python
+import subprocess
+import json
+
+# Get monthly usage data
+result = subprocess.run(['ccusage', 'monthly', '--json'], 
+                       capture_output=True, text=True)
+monthly_data = json.loads(result.stdout)
+
+# Analyze usage trends
+for month in monthly_data:
+    print(f"{month['month']}: ${month['totalCost']:.4f}")
+```
+
+### Shell Script Dashboard
+
+```bash
+#!/bin/bash
+
+# Create a simple usage dashboard
+echo "=== Claude Code Usage Dashboard ==="
+echo ""
+
+# Today's usage
+today=$(date +%Y-%m-%d)
+cost=$(ccusage daily --json | jq -r ".[] | select(.date == \"$today\") | .totalCost")
+echo "Today's cost: \$$cost"
+
+# This month's total
+month_cost=$(ccusage monthly --json | jq -r '.[0].totalCost')
+echo "This month: \$$month_cost"
+
+# Most used model
+model=$(ccusage daily --json | jq -r '[.[].modelsUsed[]] | group_by(.) | max_by(length) | .[0]')
+echo "Most used model: $model"
+```
+
+<Note>
+JSON output is sent to stdout, while any warnings or errors go to stderr. This allows you to pipe JSON data while still seeing diagnostic messages.
+</Note>
+
+<Warning>
+When using `--instances` flag, the output structure changes from an array to an object with project names as keys. Make sure your scripts handle both formats appropriately.
+</Warning>
+
+## Type Definitions
+
+The complete TypeScript type definitions are available in the source:
+
+```typescript
+// From src/_json-output-types.ts
+import type { DailyDate, ModelName } from './_types';
+import type { ModelBreakdown } from './data-loader';
+
+export type DailyProjectOutput = {
+  date: DailyDate;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+  totalTokens: number;
+  totalCost: number;
+  modelsUsed: ModelName[];
+  modelBreakdowns: ModelBreakdown[];
+};
+```
+
+See [Library Usage](/advanced/library-usage) for importing these types in your own TypeScript projects.

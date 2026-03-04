@@ -1,0 +1,249 @@
+---
+title: weekly
+description: Show usage report grouped by week
+---
+
+## Overview
+
+The `weekly` command displays Claude Code usage statistics aggregated by week. It shows token usage (input, output, cache creation, and cache read tokens), costs, and models used for each week.
+
+## Usage
+
+<CodeGroup>
+```bash Basic Usage
+ccusage weekly
+```
+
+```bash Custom week start (Monday)
+ccusage weekly --start-of-week monday
+```
+
+```bash Filter by date range
+ccusage weekly --since 20240301 --until 20240331
+```
+
+```bash JSON output
+ccusage weekly --json
+```
+
+```bash With model breakdown
+ccusage weekly --breakdown
+```
+</CodeGroup>
+
+## Flags
+
+### Command-Specific Flags
+
+<ParamField path="--start-of-week" type="enum" default="sunday">
+  Day to start the week on. Determines how usage data is grouped into weekly periods.
+  
+  **Short flag:** `-w`
+  
+  **Choices:** `sunday`, `monday`, `tuesday`, `wednesday`, `thursday`, `friday`, `saturday`
+</ParamField>
+
+### Common Flags
+
+<ParamField path="--since" type="string">
+  Filter from date in YYYYMMDD format (e.g., 20240301).
+  
+  **Short flag:** `-s`
+</ParamField>
+
+<ParamField path="--until" type="string">
+  Filter until date in YYYYMMDD format (e.g., 20240331).
+  
+  **Short flag:** `-u`
+</ParamField>
+
+<ParamField path="--json" type="boolean" default="false">
+  Output in JSON format instead of a formatted table.
+  
+  **Short flag:** `-j`
+</ParamField>
+
+<ParamField path="--jq" type="string">
+  Process JSON output with jq command. Requires jq binary installed. Implies --json.
+  
+  **Short flag:** `-q`
+  
+  **Example:** `ccusage weekly --jq '.weekly[] | select(.totalCost > 5.0)'`
+</ParamField>
+
+<ParamField path="--mode" type="enum" default="auto">
+  Cost calculation mode:
+  - `auto`: Use costUSD if exists, otherwise calculate from tokens
+  - `calculate`: Always calculate costs from token counts
+  - `display`: Always use pre-calculated costUSD values
+  
+  **Short flag:** `-m`
+  
+  **Choices:** `auto`, `calculate`, `display`
+</ParamField>
+
+<ParamField path="--breakdown" type="boolean" default="false">
+  Show per-model cost breakdown. Displays detailed token usage for each model used.
+  
+  **Short flag:** `-b`
+</ParamField>
+
+<ParamField path="--offline" type="boolean" default="false">
+  Use cached pricing data for Claude models instead of fetching from API.
+  
+  **Short flag:** `-O`
+  
+  **Negatable:** Use `--no-offline` to disable
+</ParamField>
+
+<ParamField path="--order" type="enum" default="asc">
+  Sort order:
+  - `asc`: Oldest first
+  - `desc`: Newest first
+  
+  **Short flag:** `-o`
+  
+  **Choices:** `asc`, `desc`
+</ParamField>
+
+<ParamField path="--debug" type="boolean" default="false">
+  Show pricing mismatch information for debugging.
+  
+  **Short flag:** `-d`
+</ParamField>
+
+<ParamField path="--debug-samples" type="number" default="5">
+  Number of sample discrepancies to show in debug output.
+</ParamField>
+
+<ParamField path="--timezone" type="string">
+  Timezone for date grouping (e.g., UTC, America/New_York, Asia/Tokyo). Default: system timezone.
+  
+  **Short flag:** `-z`
+</ParamField>
+
+<ParamField path="--locale" type="string" default="en-US">
+  Locale for date/time formatting (e.g., en-US, ja-JP, de-DE).
+  
+  **Short flag:** `-l`
+</ParamField>
+
+<ParamField path="--compact" type="boolean" default="false">
+  Force compact mode for narrow displays (better for screenshots).
+</ParamField>
+
+<ParamField path="--config" type="string">
+  Path to configuration file. Default: auto-discovery.
+</ParamField>
+
+<ParamField path="--color" type="boolean">
+  Enable colored output (default: auto). FORCE_COLOR=1 has the same effect.
+</ParamField>
+
+<ParamField path="--no-color" type="boolean">
+  Disable colored output (default: auto). NO_COLOR=1 has the same effect.
+</ParamField>
+
+## Output Formats
+
+### Table Output (Default)
+
+Displays a formatted table with columns:
+- **Week**: Week start date in YYYY-MM-DD format
+- **Input**: Input tokens
+- **Output**: Output tokens
+- **Cache Creation**: Cache creation tokens
+- **Cache Read**: Cache read tokens
+- **Total**: Total tokens
+- **Cost**: Total cost in USD
+- **Models**: Models used that week
+
+Includes a totals row at the bottom.
+
+<Note>
+  In narrow terminals or with `--compact` flag, some columns (cache metrics and total tokens) may be hidden. A message will indicate compact mode is active.
+</Note>
+
+### JSON Output
+
+With `--json` flag, outputs structured JSON:
+
+```json
+{
+  "weekly": [
+    {
+      "week": "2024-03-03",
+      "inputTokens": 850000,
+      "outputTokens": 110000,
+      "cacheCreationTokens": 300000,
+      "cacheReadTokens": 75000,
+      "totalTokens": 1335000,
+      "totalCost": 6.25,
+      "modelsUsed": ["claude-sonnet-4-20250514"],
+      "modelBreakdowns": [
+        {
+          "model": "claude-sonnet-4-20250514",
+          "inputTokens": 850000,
+          "outputTokens": 110000,
+          "cacheCreationTokens": 300000,
+          "cacheReadTokens": 75000,
+          "totalCost": 6.25
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "inputTokens": 850000,
+    "outputTokens": 110000,
+    "cacheCreationTokens": 300000,
+    "cacheReadTokens": 75000,
+    "totalTokens": 1335000,
+    "totalCost": 6.25
+  }
+}
+```
+
+## Examples
+
+### View weekly usage (Sunday start)
+
+```bash
+ccusage weekly
+```
+
+### View weekly usage (Monday start)
+
+```bash
+ccusage weekly --start-of-week monday
+```
+
+### View March 2024 by week
+
+```bash
+ccusage weekly --since 20240301 --until 20240331
+```
+
+### Export weekly data to JSON
+
+```bash
+ccusage weekly --json > weekly-usage.json
+```
+
+### Show detailed model breakdown
+
+```bash
+ccusage weekly --breakdown
+```
+
+### Filter expensive weeks using jq
+
+```bash
+ccusage weekly --jq '.weekly[] | select(.totalCost > 5)'
+```
+
+## Related Commands
+
+- [daily](/api/commands/daily) - View usage grouped by day
+- [monthly](/api/commands/monthly) - View usage grouped by month
+- [session](/api/commands/session) - View usage by session
+- [blocks](/api/commands/blocks) - View usage by 5-hour billing blocks

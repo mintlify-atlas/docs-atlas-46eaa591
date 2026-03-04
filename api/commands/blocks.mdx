@@ -1,0 +1,356 @@
+---
+title: blocks
+description: Show usage report grouped by session billing blocks
+---
+
+## Overview
+
+The `blocks` command displays Claude Code usage statistics grouped by 5-hour billing blocks. This matches Claude's billing cycle where usage is grouped into continuous 5-hour periods. The command helps track active sessions, monitor burn rates, and project costs.
+
+## Usage
+
+<CodeGroup>
+```bash View all blocks
+ccusage blocks
+```
+
+```bash Show only active block
+ccusage blocks --active
+```
+
+```bash Show recent blocks (last 3 days)
+ccusage blocks --recent
+```
+
+```bash Set token limit for warnings
+ccusage blocks --token-limit 500000
+```
+
+```bash Use max token from history
+ccusage blocks --token-limit max
+```
+
+```bash Custom session duration
+ccusage blocks --session-length 3
+```
+
+```bash JSON output
+ccusage blocks --json
+```
+</CodeGroup>
+
+## Flags
+
+### Command-Specific Flags
+
+<ParamField path="--active" type="boolean" default="false">
+  Show only the active block with projections. Provides detailed view of current session including burn rate and projected usage.
+  
+  **Short flag:** `-a`
+</ParamField>
+
+<ParamField path="--recent" type="boolean" default="false">
+  Show blocks from the last 3 days (including active block). Useful for tracking recent usage patterns.
+  
+  **Short flag:** `-r`
+</ParamField>
+
+<ParamField path="--token-limit" type="string">
+  Token limit for quota warnings. Can be a number (e.g., 500000) or "max" to use the highest token count from previous sessions.
+  
+  **Short flag:** `-t`
+  
+  **Examples:**
+  - `--token-limit 500000` - Set explicit limit
+  - `--token-limit max` - Use max from history
+</ParamField>
+
+<ParamField path="--session-length" type="number" default="5">
+  Session block duration in hours. Default is 5 hours to match Claude's billing cycle.
+  
+  **Short flag:** `-n`
+  
+  <Warning>
+    Changing this value from the default 5 hours will not match Claude's actual billing blocks.
+  </Warning>
+</ParamField>
+
+### Common Flags
+
+<ParamField path="--since" type="string">
+  Filter from date in YYYYMMDD format (e.g., 20240301).
+  
+  **Short flag:** `-s`
+</ParamField>
+
+<ParamField path="--until" type="string">
+  Filter until date in YYYYMMDD format (e.g., 20240331).
+  
+  **Short flag:** `-u`
+</ParamField>
+
+<ParamField path="--json" type="boolean" default="false">
+  Output in JSON format instead of a formatted table.
+  
+  **Short flag:** `-j`
+</ParamField>
+
+<ParamField path="--jq" type="string">
+  Process JSON output with jq command. Requires jq binary installed. Implies --json.
+  
+  **Short flag:** `-q`
+  
+  **Example:** `ccusage blocks --jq '.blocks[] | select(.isActive)'`
+</ParamField>
+
+<ParamField path="--mode" type="enum" default="auto">
+  Cost calculation mode:
+  - `auto`: Use costUSD if exists, otherwise calculate from tokens
+  - `calculate`: Always calculate costs from token counts
+  - `display`: Always use pre-calculated costUSD values
+  
+  **Short flag:** `-m`
+  
+  **Choices:** `auto`, `calculate`, `display`
+</ParamField>
+
+<ParamField path="--breakdown" type="boolean" default="false">
+  Show per-model cost breakdown.
+  
+  **Short flag:** `-b`
+</ParamField>
+
+<ParamField path="--offline" type="boolean" default="false">
+  Use cached pricing data for Claude models instead of fetching from API.
+  
+  **Short flag:** `-O`
+  
+  **Negatable:** Use `--no-offline` to disable
+</ParamField>
+
+<ParamField path="--order" type="enum" default="asc">
+  Sort order:
+  - `asc`: Oldest first
+  - `desc`: Newest first
+  
+  **Short flag:** `-o`
+  
+  **Choices:** `asc`, `desc`
+</ParamField>
+
+<ParamField path="--debug" type="boolean" default="false">
+  Show pricing mismatch information for debugging.
+  
+  **Short flag:** `-d`
+</ParamField>
+
+<ParamField path="--debug-samples" type="number" default="5">
+  Number of sample discrepancies to show in debug output.
+</ParamField>
+
+<ParamField path="--timezone" type="string">
+  Timezone for date grouping (e.g., UTC, America/New_York, Asia/Tokyo). Default: system timezone.
+  
+  **Short flag:** `-z`
+</ParamField>
+
+<ParamField path="--locale" type="string" default="en-US">
+  Locale for date/time formatting (e.g., en-US, ja-JP, de-DE).
+  
+  **Short flag:** `-l`
+</ParamField>
+
+<ParamField path="--compact" type="boolean" default="false">
+  Force compact mode for narrow displays. Automatically enabled for terminals narrower than threshold.
+</ParamField>
+
+<ParamField path="--config" type="string">
+  Path to configuration file. Default: auto-discovery.
+</ParamField>
+
+<ParamField path="--color" type="boolean">
+  Enable colored output (default: auto). FORCE_COLOR=1 has the same effect.
+</ParamField>
+
+<ParamField path="--no-color" type="boolean">
+  Disable colored output (default: auto). NO_COLOR=1 has the same effect.
+</ParamField>
+
+## Output Formats
+
+### Table Output (Default)
+
+Displays a formatted table with columns:
+- **Block Start**: Start time of the billing block
+- **Duration/Status**: Duration for completed blocks, "ACTIVE" for current block, "(inactive)" for gaps
+- **Models**: Models used in the block
+- **Tokens**: Total tokens consumed
+- **%**: Percentage of token limit (if `--token-limit` is set)
+- **Cost**: Total cost in USD
+
+For active blocks, additional rows show:
+- **REMAINING**: Tokens remaining before hitting limit
+- **PROJECTED**: Projected total usage if current burn rate continues
+
+<Note>
+  Compact mode is automatically enabled for narrow terminals. Time and duration formats are shortened to fit smaller displays.
+</Note>
+
+### Active Block Detail View
+
+With `--active` flag, shows detailed information:
+```
+Block Started: 2024-03-15 10:00:00 (2h 30m ago)
+Time Remaining: 2h 30m
+
+Current Usage:
+  Input Tokens:     125,000
+  Output Tokens:    15,000
+  Total Cost:       $0.85
+
+Burn Rate:
+  Tokens/minute:    933
+  Cost/hour:        $0.34
+
+Projected Usage (if current rate continues):
+  Total Tokens:     280,000
+  Total Cost:       $1.70
+
+Token Limit Status:
+  Limit:            500,000 tokens
+  Current Usage:    140,000 (28.0%)
+  Remaining:        360,000 tokens
+  Projected Usage:  56.0% OK
+```
+
+### JSON Output
+
+With `--json` flag, outputs structured JSON:
+
+```json
+{
+  "blocks": [
+    {
+      "id": "block-1",
+      "startTime": "2024-03-15T10:00:00.000Z",
+      "endTime": "2024-03-15T15:00:00.000Z",
+      "actualEndTime": null,
+      "isActive": true,
+      "isGap": false,
+      "entries": 42,
+      "tokenCounts": {
+        "inputTokens": 125000,
+        "outputTokens": 15000,
+        "cacheCreationTokens": 50000,
+        "cacheReadTokens": 10000
+      },
+      "totalTokens": 200000,
+      "costUSD": 0.85,
+      "models": ["claude-sonnet-4-20250514"],
+      "burnRate": {
+        "tokensPerMinute": 933,
+        "costPerHour": 0.34,
+        "tokensPerMinuteForIndicator": 933
+      },
+      "projection": {
+        "totalTokens": 280000,
+        "totalCost": 1.70
+      },
+      "tokenLimitStatus": {
+        "limit": 500000,
+        "projectedUsage": 280000,
+        "percentUsed": 56.0,
+        "status": "ok"
+      },
+      "usageLimitResetTime": "2024-03-15T15:00:00.000Z"
+    }
+  ]
+}
+```
+
+## Burn Rate and Projections
+
+For active blocks, the command calculates:
+
+1. **Burn Rate**: Current rate of token/cost consumption
+   - Tokens per minute
+   - Cost per hour
+
+2. **Projection**: Estimated total usage if rate continues
+   - Projected total tokens
+   - Projected total cost
+
+3. **Token Limit Status**: Warnings when approaching limits
+   - OK: < 80% of limit
+   - WARNING: 80-100% of limit (yellow)
+   - EXCEEDS: > 100% of limit (red)
+
+## Examples
+
+### View current active block
+
+```bash
+ccusage blocks --active
+```
+
+### Track recent usage (last 3 days)
+
+```bash
+ccusage blocks --recent
+```
+
+### Set token limit for monitoring
+
+```bash
+ccusage blocks --token-limit 500000
+```
+
+### Use historical max as limit
+
+```bash
+ccusage blocks --token-limit max
+```
+
+### Export block data to JSON
+
+```bash
+ccusage blocks --json > blocks-usage.json
+```
+
+### Find blocks exceeding $1
+
+```bash
+ccusage blocks --jq '.blocks[] | select(.costUSD > 1)'
+```
+
+### View active block with token warnings
+
+```bash
+ccusage blocks --active --token-limit 300000
+```
+
+### Check if projected usage will exceed limit
+
+```bash
+ccusage blocks --active --token-limit max --json | jq '.blocks[0].tokenLimitStatus.status'
+```
+
+## Understanding Billing Blocks
+
+Claude Code groups usage into 5-hour billing blocks:
+- Each block starts when you begin a new session
+- Usage within the same 5-hour window is grouped together
+- Gaps between sessions (inactive periods) are marked as "(inactive)"
+- Active blocks show real-time usage and projections
+
+<Note>
+  The default 5-hour session length matches Claude's billing cycle. Changing this value with `--session-length` will not align with actual billing.
+</Note>
+
+## Related Commands
+
+- [daily](/api/commands/daily) - View usage grouped by day
+- [monthly](/api/commands/monthly) - View usage grouped by month
+- [weekly](/api/commands/weekly) - View usage grouped by week
+- [session](/api/commands/session) - View usage by session
+- [statusline](/api/commands/statusline) - Live monitoring status line

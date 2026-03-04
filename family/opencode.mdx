@@ -1,0 +1,217 @@
+---
+title: '@ccusage/opencode'
+description: Usage analyzer for OpenCode sessions
+---
+
+# @ccusage/opencode
+
+Analyze [OpenCode](https://github.com/opencode-ai/opencode) usage logs with the same reporting experience as ccusage. Track token usage, costs, and sessions for Claude models used in OpenCode.
+
+## Quick Start
+
+<CodeGroup>
+```bash npx
+npx @ccusage/opencode@latest --help
+```
+
+```bash bunx
+bunx @ccusage/opencode@latest --help
+```
+
+```bash pnpm
+pnpm dlx @ccusage/opencode
+```
+
+```bash deno
+deno run -E -R=$HOME/.local/share/opencode/ -S=homedir -N='raw.githubusercontent.com:443' npm:@ccusage/opencode@latest --help
+```
+</CodeGroup>
+
+## Installation
+
+### Shell Alias (Recommended)
+
+Since `npx @ccusage/opencode@latest` is quite long to type repeatedly, set up a shell alias:
+
+<CodeGroup>
+```bash bash/zsh
+alias ccusage-opencode='bunx @ccusage/opencode@latest'
+```
+
+```bash fish
+alias ccusage-opencode 'bunx @ccusage/opencode@latest'
+```
+</CodeGroup>
+
+Then simply run:
+
+```bash
+ccusage-opencode daily
+ccusage-opencode monthly --json
+```
+
+## Data Source
+
+The CLI looks for OpenCode usage data under:
+
+- **Default**: `~/.local/share/opencode/storage/`
+- **Custom**: Set `OPENCODE_DATA_DIR` environment variable
+
+### Storage Structure
+
+OpenCode stores usage data in:
+
+- **Messages**: `~/.local/share/opencode/storage/message/{sessionID}/msg_{messageID}.json`
+- **Sessions**: `~/.local/share/opencode/storage/session/{projectHash}/{sessionID}.json`
+
+Each message file contains token counts and model information.
+
+## Common Commands
+
+### Daily Usage Report
+
+View token usage and costs grouped by date:
+
+```bash
+npx @ccusage/opencode@latest daily
+```
+
+### Weekly Usage Report
+
+View usage grouped by ISO week (YYYY-Www):
+
+```bash
+npx @ccusage/opencode@latest weekly
+```
+
+### Monthly Report
+
+View usage aggregated by month (YYYY-MM):
+
+```bash
+npx @ccusage/opencode@latest monthly
+```
+
+### Session Report
+
+Detailed breakdown by conversation sessions:
+
+```bash
+npx @ccusage/opencode@latest session
+```
+
+### JSON Output
+
+Export structured data for scripting:
+
+```bash
+npx @ccusage/opencode@latest daily --json
+```
+
+### Compact Mode
+
+Optimized for screenshots and narrow terminals:
+
+```bash
+npx @ccusage/opencode@latest daily --compact
+```
+
+## Token Fields
+
+OpenCode message files track these token types:
+
+| Field | Description | Usage |
+|-------|-------------|-------|
+| `tokens.input` | Total input tokens sent to model | Standard input billing |
+| `tokens.output` | Completion tokens | Output billing |
+| `tokens.cache.read` | Cached prompt tokens | Cheaper cached billing |
+| `tokens.cache.write` | Cache creation tokens | Cache creation cost |
+
+## Cost Calculation
+
+OpenCode stores `cost: 0` in message files by default. This CLI calculates accurate costs from token usage data using the LiteLLM pricing database.
+
+- All models supported by LiteLLM have accurate pricing
+- Supports cache token pricing (cheaper for cached reads)
+- Automatic model price lookups
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Daily Reports" icon="calendar-day">
+    View token usage and costs aggregated by date
+  </Card>
+  
+  <Card title="Weekly Reports" icon="calendar-week">
+    View usage grouped by ISO week (YYYY-Www)
+  </Card>
+  
+  <Card title="Monthly Reports" icon="calendar">
+    View usage aggregated by month (YYYY-MM)
+  </Card>
+  
+  <Card title="Session Reports" icon="comments">
+    View usage grouped by conversation sessions
+  </Card>
+  
+  <Card title="Responsive Tables" icon="table">
+    Automatic layout adjustment for terminal width
+  </Card>
+  
+  <Card title="Model Tracking" icon="microchip">
+    See which Claude models you're using (Opus, Sonnet, Haiku, etc.)
+  </Card>
+  
+  <Card title="Accurate Costs" icon="dollar-sign">
+    Uses LiteLLM pricing database for accurate cost calculation
+  </Card>
+  
+  <Card title="Cache Support" icon="database">
+    Tracks cache creation and cache read tokens separately
+  </Card>
+  
+  <Card title="JSON Output" icon="code">
+    Export data in structured JSON format with --json
+  </Card>
+  
+  <Card title="Compact Mode" icon="compress">
+    Use --compact flag for narrow terminals, perfect for screenshots
+  </Card>
+</CardGroup>
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|----------|
+| `OPENCODE_DATA_DIR` | Override OpenCode data directory | `~/.local/share/opencode` |
+| `LOG_LEVEL` | Control log verbosity (0 silent … 5 trace) | - |
+
+## Example Output
+
+The CLI provides beautiful terminal tables showing:
+
+- Date or session information
+- Models used (with bullet points for multiple models)
+- Total tokens (input + output)
+- Cache tokens (read and write)
+- Estimated cost in USD
+
+## Links
+
+<CardGroup cols={2}>
+  <Card title="npm Package" icon="npm" href="https://www.npmjs.com/package/@ccusage/opencode">
+    View on npm registry
+  </Card>
+  
+  <Card title="OpenCode" icon="github" href="https://github.com/opencode-ai/opencode">
+    Official OpenCode repository
+  </Card>
+  
+  <Card title="ccusage Family" icon="layer-group" href="/family/overview">
+    Explore all related tools
+  </Card>
+  
+  <Card title="Main Documentation" icon="book" href="https://ccusage.com">
+    Full ccusage documentation
+  </Card>
+</CardGroup>

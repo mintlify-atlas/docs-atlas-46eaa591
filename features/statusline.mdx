@@ -1,0 +1,364 @@
+---
+title: Status Line (Beta)
+description: Compact status display for terminal hooks and prompts
+---
+
+The `statusline` command provides a compact, single-line status display designed for integration with terminal hooks, shell prompts, and tmux/screen status bars.
+
+<Warning>
+This feature is currently in **Beta**. The API and output format may change in future releases.
+</Warning>
+
+## Basic Usage
+
+Statusline reads Claude Code hook data from stdin:
+
+```bash
+echo '{"session_id":"abc","model":{"id":"claude-sonnet-4","display_name":"Claude 4 Sonnet"},"transcript_path":"/path/to/transcript"}' | ccusage statusline
+```
+
+Output format:
+```
+🤖 Claude 4 Sonnet | 💰 $0.45 session / $2.34 today / $1.20 block (3h 15m left) | 🔥 $0.12/hr 🟢 | 🧠 45,230 (23%)
+```
+
+## Output Components
+
+The status line includes several information segments:
+
+### 1. Model
+```
+🤖 Claude 4 Sonnet
+```
+Shows the current Claude model in use.
+
+### 2. Costs
+```
+💰 $0.45 session / $2.34 today / $1.20 block (3h 15m left)
+```
+- **Session**: Current conversation cost
+- **Today**: Total cost for today
+- **Block**: Current 5-hour billing block cost and time remaining
+
+### 3. Burn Rate (Optional)
+```
+🔥 $0.12/hr 🟢
+```
+Shows current cost burn rate with status indicator:
+- 🟢 Normal: < 2000 tokens/min
+- ⚠️ Moderate: 2000-5000 tokens/min
+- 🚨 High: > 5000 tokens/min
+
+### 4. Context Usage
+```
+🧠 45,230 (23%)
+```
+Input tokens and context window percentage, color-coded:
+- Green: < 70% (configurable)
+- Yellow: 70-90% (configurable)
+- Red: > 90%
+
+## Command Options
+
+### Cache Control
+
+Enable or disable caching:
+
+```bash
+echo $HOOK_DATA | ccusage statusline --cache
+echo $HOOK_DATA | ccusage statusline --no-cache
+```
+
+Caching uses a hybrid system:
+- **Time-based expiry**: Cache expires after refresh interval (default: 30 seconds)
+- **File modification**: Immediate invalidation when transcript changes
+
+<Tip>
+Caching significantly improves performance for frequently-called hooks. The default 30-second interval balances freshness with speed.
+</Tip>
+
+### Refresh Interval
+
+Customize cache expiry time (in seconds):
+
+```bash
+echo $HOOK_DATA | ccusage statusline --refresh-interval 60
+```
+
+### Visual Burn Rate
+
+Control burn rate visualization:
+
+```bash
+echo $HOOK_DATA | ccusage statusline --visual-burn-rate emoji
+echo $HOOK_DATA | ccusage statusline --visual-burn-rate text
+echo $HOOK_DATA | ccusage statusline --visual-burn-rate emoji-text
+echo $HOOK_DATA | ccusage statusline --visual-burn-rate off
+```
+
+Options:
+- `off` (default): No burn rate display
+- `emoji`: Show emoji indicator only (🟢/⚠️/🚨)
+- `text`: Show text status only (Normal/Moderate/High)
+- `emoji-text`: Show both emoji and text
+
+### Cost Source
+
+Control where session costs come from:
+
+```bash
+echo $HOOK_DATA | ccusage statusline --cost-source auto
+echo $HOOK_DATA | ccusage statusline --cost-source ccusage
+echo $HOOK_DATA | ccusage statusline --cost-source cc
+echo $HOOK_DATA | ccusage statusline --cost-source both
+```
+
+Options:
+- `auto` (default): Prefer Claude Code cost, fallback to ccusage
+- `ccusage`: Always calculate using ccusage
+- `cc`: Always use Claude Code cost
+- `both`: Show both costs side by side
+
+Example with `both`:
+```
+💰 ($0.45 cc / $0.44 ccusage) session / ...
+```
+
+### Context Thresholds
+
+Customize color-coding thresholds for context usage (0-100):
+
+```bash
+echo $HOOK_DATA | ccusage statusline --context-low-threshold 60 --context-medium-threshold 85
+```
+
+- `--context-low-threshold`: Below this, show green (default: 70)
+- `--context-medium-threshold`: Below this, show yellow (default: 90)
+- Above medium threshold: show red
+
+<Note>
+Low threshold must be less than medium threshold. Both must be between 0 and 100.
+</Note>
+
+## Common Flags
+
+<ResponseField name="--cache / --no-cache" type="boolean">
+  Enable cache for status line output (default: true)
+</ResponseField>
+
+<ResponseField name="--refresh-interval" type="number">
+  Refresh interval in seconds for cache expiry (default: 30)
+</ResponseField>
+
+<ResponseField name="--visual-burn-rate, -B" type="enum">
+  Burn rate visualization: `off`, `emoji`, `text`, `emoji-text` (default: off)
+</ResponseField>
+
+<ResponseField name="--cost-source" type="enum">
+  Session cost source: `auto`, `ccusage`, `cc`, `both` (default: auto)
+</ResponseField>
+
+<ResponseField name="--context-low-threshold" type="number">
+  Context usage percentage below which status is shown in green (0-100, default: 70)
+</ResponseField>
+
+<ResponseField name="--context-medium-threshold" type="number">
+  Context usage percentage below which status is shown in yellow (0-100, default: 90)
+</ResponseField>
+
+<ResponseField name="--offline, -O" type="boolean">
+  Use cached pricing data instead of fetching from API (default: true for statusline)
+</ResponseField>
+
+<ResponseField name="--config" type="string">
+  Path to configuration file (default: auto-discovery)
+</ResponseField>
+
+<ResponseField name="--debug, -d" type="boolean">
+  Show debug information (default: false)
+</ResponseField>
+
+## Hook Integration
+
+### Claude Code Hooks
+
+Create a hook script that pipes Claude Code data to statusline:
+
+```bash ~/.config/claude/hooks/on-session-update.sh
+#!/bin/bash
+ccusage statusline
+```
+
+Claude Code automatically provides hook data via stdin in the required JSON format.
+
+### Shell Prompt (PS1)
+
+Integrate with bash/zsh prompts:
+
+```bash ~/.bashrc
+function claude_status() {
+  # Your logic to get hook data
+  echo $HOOK_DATA | ccusage statusline --visual-burn-rate emoji
+}
+
+PS1='$(claude_status) $ '
+```
+
+### Tmux Status Bar
+
+```bash ~/.tmux.conf
+set -g status-right '#(echo $HOOK_DATA | ccusage statusline --visual-burn-rate emoji)'
+```
+
+## Input Format
+
+Statusline expects JSON input with this structure:
+
+```json
+{
+  "session_id": "abc123-def456",
+  "model": {
+    "id": "claude-sonnet-4-20250514",
+    "display_name": "Claude 4 Sonnet"
+  },
+  "transcript_path": "/path/to/transcript.jsonl",
+  "cost": {
+    "total_cost_usd": 0.45
+  },
+  "context_window": {
+    "total_input_tokens": 45230,
+    "context_window_size": 200000
+  }
+}
+```
+
+Required fields:
+- `session_id`: Claude Code session identifier
+- `model.id`: Model identifier
+- `model.display_name`: Human-readable model name
+- `transcript_path`: Path to session transcript file
+
+Optional fields:
+- `cost.total_cost_usd`: Pre-calculated session cost
+- `context_window.total_input_tokens`: Input tokens in context
+- `context_window.context_window_size`: Model's context window size
+
+## Caching Behavior
+
+Statusline uses a hybrid caching system for performance:
+
+### Time-Based Expiry
+
+Cache expires after the refresh interval (default: 30 seconds):
+
+```bash
+# Cache for 60 seconds
+echo $HOOK_DATA | ccusage statusline --refresh-interval 60
+```
+
+### File Modification Detection
+
+Cache is immediately invalidated when the transcript file is modified, ensuring real-time updates during active sessions.
+
+### Process Coordination
+
+If another process is updating the cache, statusline returns the stale output to avoid concurrent updates and maintain responsiveness.
+
+### Cache Location
+
+Cache files are stored in:
+```
+/tmp/ccusage-semaphore/{session_id}.lock
+```
+
+These are automatically cleaned up by the OS on restart.
+
+## Examples
+
+### Minimal Status
+
+```bash
+echo $HOOK_DATA | ccusage statusline --visual-burn-rate off
+```
+
+### Full Status with Burn Rate
+
+```bash
+echo $HOOK_DATA | ccusage statusline --visual-burn-rate emoji-text
+```
+
+### Custom Context Thresholds
+
+```bash
+echo $HOOK_DATA | ccusage statusline --context-low-threshold 50 --context-medium-threshold 80
+```
+
+### Compare Cost Sources
+
+```bash
+echo $HOOK_DATA | ccusage statusline --cost-source both
+```
+
+### Disable Cache for Testing
+
+```bash
+echo $HOOK_DATA | ccusage statusline --no-cache
+```
+
+## Performance Considerations
+
+### Enable Caching
+
+Always use caching for hooks called frequently:
+
+```bash
+echo $HOOK_DATA | ccusage statusline --cache
+```
+
+### Offline Mode
+
+Statusline defaults to `--offline` mode for faster performance (no API calls for pricing data).
+
+### Adjust Refresh Interval
+
+Balance freshness vs. performance:
+- Shorter intervals (15-30s): More frequent updates, slightly higher CPU
+- Longer intervals (60s+): Better performance, less frequent updates
+
+```bash
+echo $HOOK_DATA | ccusage statusline --refresh-interval 15
+```
+
+## Troubleshooting
+
+### "No input provided"
+
+Ensure you're piping JSON data to stdin:
+
+```bash
+echo '{...}' | ccusage statusline
+```
+
+### "Invalid input format"
+
+Verify your JSON matches the expected schema. Required fields:
+- `session_id`
+- `model.id`
+- `model.display_name`
+- `transcript_path`
+
+### "Error generating status"
+
+With `--cache` enabled, statusline returns the last successful output on error. Disable cache to see the actual error:
+
+```bash
+echo $HOOK_DATA | ccusage statusline --no-cache --debug
+```
+
+### Context shows "N/A"
+
+Context calculation requires either:
+1. `context_window` data in hook input, OR
+2. A valid transcript file at `transcript_path`
+
+Verify the transcript file exists and is readable.

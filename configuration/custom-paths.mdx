@@ -1,0 +1,306 @@
+---
+title: Custom Data Paths
+description: Managing multiple Claude Code installations and custom data directories
+---
+
+ccusage supports flexible data directory configuration to handle multiple Claude Code installations, custom paths, and different deployment scenarios.
+
+## Default Behavior
+
+Without any configuration, ccusage automatically searches for Claude data in standard locations:
+
+1. **XDG config directory**: `~/.config/claude/projects/` (new default)
+2. **Legacy directory**: `~/.claude/projects/` (old default)
+
+<Info>Both directories are checked automatically. Usage data from all valid directories is aggregated.</Info>
+
+```bash
+# Uses default paths automatically
+ccusage daily
+
+# Equivalent to:
+ccusage daily # searches ~/.config/claude and ~/.claude
+```
+
+## Single Custom Path
+
+To use a custom Claude data directory, set the `CLAUDE_CONFIG_DIR` environment variable:
+
+<CodeGroup>
+```bash Temporary override
+CLAUDE_CONFIG_DIR="/path/to/claude" ccusage daily
+```
+
+```bash Permanent setting (bash/zsh)
+export CLAUDE_CONFIG_DIR="/path/to/claude"
+ccusage daily
+```
+
+```bash Shell profile (.bashrc/.zshrc)
+# Add to ~/.bashrc or ~/.zshrc
+export CLAUDE_CONFIG_DIR="$HOME/custom/claude"
+```
+</CodeGroup>
+
+<Note>
+The custom path must contain a `projects/` subdirectory with JSONL files for ccusage to recognize it as valid.
+</Note>
+
+## Multiple Claude Installations
+
+ccusage can aggregate data from multiple Claude Code installations by specifying comma-separated paths:
+
+```bash
+# Multiple paths (comma-separated)
+export CLAUDE_CONFIG_DIR="/home/user/.config/claude,/opt/claude-prod,/mnt/backup/claude"
+
+ccusage daily
+```
+
+**Use cases:**
+- Development and production environments
+- Multiple user accounts
+- Backup/archive directories
+- Team-wide usage aggregation
+
+### Example: Dev + Prod Tracking
+
+```bash
+#!/bin/bash
+
+# Track usage across development and production
+export CLAUDE_CONFIG_DIR="$HOME/.config/claude,/var/lib/claude-prod"
+
+# Get combined usage report
+ccusage daily --breakdown
+
+# Results include data from both directories
+```
+
+## Directory Structure Requirements
+
+Each Claude data directory must follow this structure:
+
+```
+CLAUDE_CONFIG_DIR/
+├── projects/              # Required: Main projects directory
+│   ├── project1/         # Project directories
+│   │   ├── session1.jsonl
+│   │   └── session2.jsonl
+│   └── project2/
+│       └── session3.jsonl
+└── ccusage.json          # Optional: Configuration file
+```
+
+<Note>
+The `projects/` subdirectory is **required**. Directories without this subdirectory are ignored with a warning.
+</Note>
+
+## Path Resolution
+
+ccusage resolves paths in the following order:
+
+1. **Environment variable set**: Uses only `CLAUDE_CONFIG_DIR` paths
+   - Validates each path has `projects/` subdirectory
+   - Errors if no valid paths found
+   - Ignores default paths entirely
+
+2. **No environment variable**: Uses default paths
+   - Checks `~/.config/claude/projects/`
+   - Checks `~/.claude/projects/`
+   - Uses first valid directory found
+   - Errors if neither exists
+
+### Priority Rules
+
+<CodeGroup>
+```bash Environment variable takes precedence
+# Only uses /custom/path, ignores ~/.claude
+export CLAUDE_CONFIG_DIR="/custom/path"
+ccusage daily
+```
+
+```bash Multiple paths with priority
+# Uses both paths, no priority order
+export CLAUDE_CONFIG_DIR="/path1,/path2"
+ccusage daily
+```
+
+```bash Defaults when not set
+# Uses ~/.config/claude or ~/.claude
+unset CLAUDE_CONFIG_DIR
+ccusage daily
+```
+</CodeGroup>
+
+## Configuration File Discovery
+
+When using custom paths, configuration files are searched in:
+
+1. **Local project**: `.ccusage/ccusage.json` (current directory)
+2. **Each custom path**: `$CLAUDE_CONFIG_DIR/ccusage.json`
+3. **Default paths**: `~/.config/claude/ccusage.json`, `~/.claude/ccusage.json`
+
+See [Config Files](/configuration/config-files) for configuration format.
+
+## Common Scenarios
+
+### Scenario 1: Docker Container
+
+Mount Claude data directory into container:
+
+```dockerfile Dockerfile
+FROM node:20-alpine
+
+# Install ccusage
+RUN npm install -g ccusage
+
+# Set custom path for mounted volume
+ENV CLAUDE_CONFIG_DIR=/data/claude
+
+CMD ["ccusage", "daily", "--json"]
+```
+
+```bash Run container
+docker run -v /host/claude:/data/claude ccusage-image
+```
+
+### Scenario 2: Network Storage
+
+Access Claude data from network-mounted storage:
+
+```bash
+# Mount network drive
+mount -t nfs server:/claude-data /mnt/claude
+
+# Point ccusage to network location
+export CLAUDE_CONFIG_DIR="/mnt/claude"
+ccusage daily
+```
+
+### Scenario 3: Multi-User System
+
+Aggregate usage from multiple user accounts:
+
+```bash Team usage script
+#!/bin/bash
+
+# Aggregate data from all team members
+CLAUDE_DIRS=""
+for user in /home/*; do
+  if [ -d "$user/.config/claude/projects" ]; then
+    CLAUDE_DIRS="$CLAUDE_DIRS,$user/.config/claude"
+  fi
+done
+
+# Remove leading comma
+CLAUDE_DIRS=${CLAUDE_DIRS#,}
+
+# Generate team report
+CLAUDE_CONFIG_DIR="$CLAUDE_DIRS" ccusage monthly --breakdown
+```
+
+### Scenario 4: CI/CD Pipeline
+
+Track usage in automated environments:
+
+```yaml GitHub Actions
+name: Usage Tracking
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight
+
+jobs:
+  track-usage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install ccusage
+        run: npm install -g ccusage
+      
+      - name: Track usage
+        env:
+          CLAUDE_CONFIG_DIR: /var/lib/claude
+          LOG_LEVEL: 0
+        run: |
+          ccusage daily --json > usage-report.json
+          ccusage monthly --json > monthly-report.json
+      
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: usage-reports
+          path: '*-report.json'
+```
+
+## Troubleshooting
+
+### Path Not Found Error
+
+```bash
+Error: No valid Claude data directories found in CLAUDE_CONFIG_DIR.
+Please ensure the following exists:
+- /path/to/claude/projects
+```
+
+**Solution**: Verify the directory structure:
+
+```bash
+# Check if projects directory exists
+ls -la $CLAUDE_CONFIG_DIR/projects
+
+# Verify JSONL files are present
+find $CLAUDE_CONFIG_DIR/projects -name "*.jsonl"
+```
+
+### Multiple Paths Not Working
+
+```bash
+# Verify paths are comma-separated without spaces
+export CLAUDE_CONFIG_DIR="/path1,/path2"  # Correct
+export CLAUDE_CONFIG_DIR="/path1, /path2"  # Incorrect (space after comma)
+
+# Check each path individually
+for path in $(echo $CLAUDE_CONFIG_DIR | tr ',' ' '); do
+  echo "Checking: $path"
+  ls -la "$path/projects" || echo "Not found"
+done
+```
+
+### Permission Issues
+
+```bash
+# Verify read permissions
+ls -la $CLAUDE_CONFIG_DIR/projects
+
+# Grant read access if needed
+chmod -R u+r $CLAUDE_CONFIG_DIR/projects
+```
+
+## Debugging Paths
+
+Use debug mode to see which paths are detected:
+
+```bash
+LOG_LEVEL=4 ccusage daily --debug
+
+# Output shows:
+# - Detected CLAUDE_CONFIG_DIR value
+# - Validated directory paths
+# - Found JSONL files
+# - Configuration file locations
+```
+
+## Related
+
+- [Environment Variables](/configuration/environment-variables) - Full environment variable reference
+- [Config Files](/configuration/config-files) - Configuration file locations and formats
+- [CLI Options](/configuration/cli-options) - Command-line options

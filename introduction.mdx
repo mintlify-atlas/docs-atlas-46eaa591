@@ -1,0 +1,78 @@
+---
+title: Introduction
+description: Analyze your Claude Code token usage and costs from local JSONL files — incredibly fast and informative
+---
+
+<img src="https://cdn.jsdelivr.net/gh/ryoppippi/ccusage@main/docs/public/screenshot.png" alt="ccusage CLI showing daily token usage report" />
+
+## What is ccusage?
+
+ccusage is a CLI tool that analyzes Claude Code token usage and costs from local JSONL files. Track your daily, monthly, and session-based usage with beautiful tables and comprehensive reporting.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Daily and monthly reports" icon="calendar">
+    View token usage and costs aggregated by date or month with beautiful table formatting
+  </Card>
+  
+  <Card title="Session tracking" icon="messages">
+    Analyze usage grouped by conversation sessions to understand project-level costs
+  </Card>
+  
+  <Card title="5-hour billing blocks" icon="clock">
+    Track usage within Claude's billing windows with active block monitoring
+  </Card>
+  
+  <Card title="Model breakdown" icon="chart-bar">
+    See which Claude models you're using (Opus, Sonnet) with per-model cost analysis
+  </Card>
+  
+  <Card title="Cache token support" icon="database">
+    Tracks cache creation and cache read tokens separately for accurate cost tracking
+  </Card>
+  
+  <Card title="JSON output" icon="code">
+    Export data in structured JSON format for programmatic consumption and automation
+  </Card>
+  
+  <Card title="Project analysis" icon="folder">
+    Group usage by project with `--instances` flag and filter by specific projects
+  </Card>
+  
+  <Card title="MCP integration" icon="plug">
+    Built-in Model Context Protocol server for integration with Claude Desktop and other tools
+  </Card>
+</CardGroup>
+
+## Why ccusage?
+
+- **Ultra-small bundle size** - Incredibly lightweight even without minification, perfect for instant execution with `npx`
+- **Offline mode** - Use pre-cached pricing data without network connectivity (Claude models only)
+- **Smart tables** - Automatic compact mode for narrow terminals with essential columns
+- **Timezone support** - Configure timezone for date grouping with `--timezone` option
+- **Locale support** - Customize date/time formatting with `--locale` option (e.g., en-US, ja-JP, de-DE)
+- **Configuration files** - Set defaults with JSON configuration files, complete with IDE autocomplete and validation
+
+## ccusage family
+
+ccusage is part of a family of usage analysis tools:
+
+- **[ccusage](https://www.npmjs.com/package/ccusage)** - Claude Code usage analyzer
+- **[@ccusage/codex](https://www.npmjs.com/package/@ccusage/codex)** - OpenAI Codex usage analyzer
+- **[@ccusage/opencode](https://www.npmjs.com/package/@ccusage/opencode)** - OpenCode usage analyzer
+- **[@ccusage/pi](https://www.npmjs.com/package/@ccusage/pi)** - Pi-agent usage analyzer
+- **[@ccusage/amp](https://www.npmjs.com/package/@ccusage/amp)** - Amp usage analyzer
+- **[@ccusage/mcp](https://www.npmjs.com/package/@ccusage/mcp)** - MCP server integration
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install ccusage with your preferred package manager
+  </Card>
+  
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Get started with your first usage report
+  </Card>
+</CardGroup>

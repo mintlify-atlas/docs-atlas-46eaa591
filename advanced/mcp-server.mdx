@@ -1,0 +1,425 @@
+---
+title: MCP Server Integration
+description: Access ccusage data through Model Context Protocol for Claude Desktop and other MCP clients
+---
+
+The `@ccusage/mcp` package provides a Model Context Protocol (MCP) server that exposes ccusage functionality to MCP-compatible clients like Claude Desktop. This enables real-time usage tracking directly within your AI workflows.
+
+## What is MCP?
+
+Model Context Protocol (MCP) is an open protocol that enables AI applications to access external data sources and tools. The ccusage MCP server exposes your Claude Code usage data as MCP tools that can be called from Claude Desktop conversations.
+
+## Installation
+
+### Quick Start
+
+```bash
+# Using bunx (recommended for speed)
+bunx @ccusage/mcp@latest
+
+# Using npx
+npx @ccusage/mcp@latest
+
+# View available options
+npx @ccusage/mcp@latest -- --help
+```
+
+### Transport Options
+
+The MCP server supports multiple transport protocols:
+
+<Tabs>
+  <Tab title="stdio (default)">
+    Standard input/output transport for process-based communication.
+    
+    ```bash
+    npx @ccusage/mcp@latest
+    ```
+    
+    **Best for:** Claude Desktop, local MCP clients
+  </Tab>
+  <Tab title="HTTP">
+    HTTP-based transport for web integration.
+    
+    ```bash
+    npx @ccusage/mcp@latest -- --type http --port 8080
+    ```
+    
+    **Best for:** Web applications, remote access
+  </Tab>
+</Tabs>
+
+## Claude Desktop Integration
+
+Integrate ccusage into Claude Desktop to query your usage data during conversations.
+
+### Configuration
+
+Add to your Claude Desktop MCP configuration file:
+
+<Tabs>
+  <Tab title="macOS">
+    Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
+    
+    ```json
+    {
+      "mcpServers": {
+        "ccusage": {
+          "command": "npx",
+          "args": ["@ccusage/mcp@latest"],
+          "type": "stdio"
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Windows">
+    Edit `%APPDATA%\Claude\claude_desktop_config.json`:
+    
+    ```json
+    {
+      "mcpServers": {
+        "ccusage": {
+          "command": "npx",
+          "args": ["@ccusage/mcp@latest"],
+          "type": "stdio"
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Linux">
+    Edit `~/.config/Claude/claude_desktop_config.json`:
+    
+    ```json
+    {
+      "mcpServers": {
+        "ccusage": {
+          "command": "npx",
+          "args": ["@ccusage/mcp@latest"],
+          "type": "stdio"
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+After updating the configuration, restart Claude Desktop for changes to take effect.
+</Note>
+
+### Using in Conversations
+
+Once configured, you can ask Claude Desktop questions about your usage:
+
+<CodeGroup>
+```text Daily Usage
+"What's my Claude Code usage today?"
+```
+
+```text Monthly Costs
+"Show me my total costs for this month"
+```
+
+```text Session Analysis
+"Which projects have I used the most?"
+```
+
+```text Cost Trends
+"Compare my usage between this week and last week"
+```
+</CodeGroup>
+
+Claude will use the MCP tools to fetch your actual usage data and provide accurate answers.
+
+## Claude Code Integration
+
+Add ccusage MCP server to Claude Code:
+
+```bash
+claude mcp add ccusage npx -- @ccusage/mcp@latest
+```
+
+This enables Claude Code to access its own usage data through the MCP protocol.
+
+## Available MCP Tools
+
+The ccusage MCP server provides four tools matching the main CLI commands:
+
+### daily
+
+Retrieve daily usage reports with token counts and costs.
+
+<ResponseField name="since" type="string">
+  Start date in YYYYMMDD format (optional)
+</ResponseField>
+
+<ResponseField name="until" type="string">
+  End date in YYYYMMDD format (optional)
+</ResponseField>
+
+<ResponseField name="breakdown" type="boolean">
+  Include per-model cost breakdown (optional, default: false)
+</ResponseField>
+
+<ResponseField name="mode" type="string">
+  Cost calculation mode: auto, calculate, or display (optional, default: auto)
+</ResponseField>
+
+**Example Response:**
+```json
+{
+  "dailyUsage": [
+    {
+      "date": "2025-03-04",
+      "inputTokens": 15234,
+      "outputTokens": 8923,
+      "cacheCreationTokens": 2341,
+      "cacheReadTokens": 12567,
+      "totalTokens": 39065,
+      "totalCost": 0.0456,
+      "modelsUsed": ["claude-sonnet-4-20250514"]
+    }
+  ]
+}
+```
+
+### monthly
+
+Retrieve monthly aggregated usage reports.
+
+<ResponseField name="mode" type="string">
+  Cost calculation mode: auto, calculate, or display (optional, default: auto)
+</ResponseField>
+
+**Example Response:**
+```json
+{
+  "monthlyUsage": [
+    {
+      "month": "2025-03",
+      "inputTokens": 456789,
+      "outputTokens": 234567,
+      "cacheCreationTokens": 45678,
+      "cacheReadTokens": 123456,
+      "totalTokens": 860490,
+      "totalCost": 1.2345,
+      "modelsUsed": ["claude-sonnet-4-20250514", "claude-opus-4-20250514"]
+    }
+  ]
+}
+```
+
+### session
+
+Retrieve usage grouped by conversation sessions (projects).
+
+<ResponseField name="mode" type="string">
+  Cost calculation mode: auto, calculate, or display (optional, default: auto)
+</ResponseField>
+
+**Example Response:**
+```json
+{
+  "sessionUsage": [
+    {
+      "sessionId": "my-project",
+      "projectPath": "/path/to/my-project",
+      "inputTokens": 45678,
+      "outputTokens": 23456,
+      "cacheCreationTokens": 4567,
+      "cacheReadTokens": 12345,
+      "totalCost": 0.2345,
+      "lastActivity": "2025-03-04T15:30:00Z",
+      "modelsUsed": ["claude-sonnet-4-20250514"]
+    }
+  ]
+}
+```
+
+### blocks
+
+Retrieve usage organized by 5-hour billing windows.
+
+<ResponseField name="active" type="boolean">
+  Show only active block with projections (optional, default: false)
+</ResponseField>
+
+<ResponseField name="recent" type="boolean">
+  Show blocks from last 3 days including active (optional, default: false)
+</ResponseField>
+
+<ResponseField name="mode" type="string">
+  Cost calculation mode: auto, calculate, or display (optional, default: auto)
+</ResponseField>
+
+**Example Response:**
+```json
+{
+  "blocks": [
+    {
+      "blockStart": "2025-03-04T10:00:00Z",
+      "blockEnd": "2025-03-04T15:00:00Z",
+      "inputTokens": 12345,
+      "outputTokens": 6789,
+      "cacheCreationTokens": 1234,
+      "cacheReadTokens": 5678,
+      "totalTokens": 26046,
+      "totalCost": 0.0345,
+      "isActive": true,
+      "modelsUsed": ["claude-sonnet-4-20250514"]
+    }
+  ]
+}
+```
+
+## HTTP Server
+
+For web applications, run the MCP server with HTTP transport:
+
+```bash
+npx @ccusage/mcp@latest -- --type http --port 8080
+```
+
+### API Endpoints
+
+The HTTP server exposes MCP protocol endpoints:
+
+<CodeGroup>
+```bash List Tools
+curl http://localhost:8080/mcp/tools
+```
+
+```bash Call Daily Tool
+curl -X POST http://localhost:8080/mcp/tools/daily \
+  -H "Content-Type: application/json" \
+  -d '{
+    "since": "20250301",
+    "until": "20250307",
+    "breakdown": true
+  }'
+```
+
+```bash Call Monthly Tool
+curl -X POST http://localhost:8080/mcp/tools/monthly \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "calculate"
+  }'
+```
+</CodeGroup>
+
+<Warning>
+The HTTP server is intended for local development and trusted networks. Do not expose it to the public internet without proper authentication and encryption.
+</Warning>
+
+## Custom Client Integration
+
+Integrate ccusage MCP server into your own MCP client:
+
+```typescript
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+
+// Create transport
+const transport = new StdioClientTransport({
+  command: 'npx',
+  args: ['@ccusage/mcp@latest'],
+});
+
+// Create client
+const client = new Client({
+  name: 'my-app',
+  version: '1.0.0',
+}, {
+  capabilities: {}
+});
+
+// Connect
+await client.connect(transport);
+
+// List available tools
+const tools = await client.listTools();
+console.log('Available tools:', tools);
+
+// Call daily tool
+const result = await client.callTool({
+  name: 'daily',
+  arguments: {
+    since: '20250301',
+    until: '20250307',
+    breakdown: true
+  }
+});
+
+console.log('Daily usage:', result);
+```
+
+## Configuration
+
+The MCP server respects the same environment variables as the CLI:
+
+<ResponseField name="CLAUDE_CONFIG_DIR" type="string">
+  Custom Claude data directory paths (comma-separated for multiple paths)
+  
+  ```bash
+  export CLAUDE_CONFIG_DIR="/path/to/claude1,/path/to/claude2"
+  npx @ccusage/mcp@latest
+  ```
+</ResponseField>
+
+<ResponseField name="LOG_LEVEL" type="number">
+  Logging verbosity (0=silent, 1=warn, 2=log, 3=info, 4=debug, 5=trace)
+  
+  ```bash
+  LOG_LEVEL=4 npx @ccusage/mcp@latest
+  ```
+</ResponseField>
+
+## Troubleshooting
+
+### Claude Desktop Not Detecting Server
+
+1. Verify the configuration file path for your OS
+2. Check JSON syntax with a validator
+3. Restart Claude Desktop completely
+4. Check Claude Desktop logs for error messages
+
+### Connection Timeouts
+
+```bash
+# Increase timeout with environment variable
+MCP_TIMEOUT=30000 npx @ccusage/mcp@latest
+```
+
+### Permission Errors
+
+Ensure the MCP server has access to Claude data directories:
+
+```bash
+# Check directory permissions
+ls -la ~/.config/claude/projects/
+ls -la ~/.claude/projects/
+
+# Fix permissions if needed
+chmod -R u+r ~/.config/claude/projects/
+```
+
+### Debugging
+
+Enable debug logging:
+
+```bash
+LOG_LEVEL=4 npx @ccusage/mcp@latest
+```
+
+<Note>
+For more details on Model Context Protocol, visit [modelcontextprotocol.io](https://modelcontextprotocol.io)
+</Note>
+
+## Related Resources
+
+- [MCP Server Package README](https://github.com/ryoppippi/ccusage/tree/main/apps/mcp)
+- [Model Context Protocol Documentation](https://modelcontextprotocol.io)
+- [Claude Desktop MCP Guide](https://docs.anthropic.com/claude/docs/model-context-protocol)

@@ -1,0 +1,265 @@
+---
+title: Session Reports
+description: Track usage grouped by conversation sessions and project directories
+---
+
+The `session` command groups your Claude Code usage by conversation sessions, showing token consumption and costs for each session.
+
+## Basic Usage
+
+```bash
+ccusage session
+```
+
+This displays a table showing usage for each session, including:
+
+- Session ID (last two parts displayed)
+- Input and output tokens
+- Cache creation and read tokens
+- Total tokens consumed
+- Total cost in USD
+- Last activity timestamp
+- Models used
+
+## Command Options
+
+### View Specific Session
+
+Load detailed usage data for a specific session ID:
+
+```bash
+ccusage session --id abc123-def456
+```
+
+This shows full details for the specified session, including all token breakdowns and model usage.
+
+### Filter by Date Range
+
+View sessions within a specific date range:
+
+```bash
+ccusage session --since 20250301 --until 20250307
+```
+
+<Note>
+Dates must be in `YYYYMMDD` format. Only sessions with activity in the specified range are shown.
+</Note>
+
+### Model Breakdown
+
+See per-model costs within each session:
+
+```bash
+ccusage session --breakdown
+```
+
+This adds detailed rows showing token usage and costs for each model used in the session.
+
+### JSON Output
+
+Export data in JSON format:
+
+```bash
+ccusage session --json
+```
+
+<CodeGroup>
+```json Standard Output
+{
+  "sessions": [
+    {
+      "sessionId": "project/abc123-def456",
+      "inputTokens": 45230,
+      "outputTokens": 12450,
+      "cacheCreationTokens": 8900,
+      "cacheReadTokens": 125000,
+      "totalTokens": 191580,
+      "totalCost": 0.45,
+      "lastActivity": "2025-03-15T14:30:00.000Z",
+      "modelsUsed": ["claude-sonnet-4-20250514"],
+      "modelBreakdowns": [...],
+      "projectPath": "/path/to/project"
+    }
+  ],
+  "totals": {
+    "inputTokens": 45230,
+    "outputTokens": 12450,
+    "cacheCreationTokens": 8900,
+    "cacheReadTokens": 125000,
+    "totalTokens": 191580,
+    "totalCost": 0.45
+  }
+}
+```
+
+```bash Specific Session
+ccusage session --id abc123-def456 --json
+```
+</CodeGroup>
+
+### jq Integration
+
+Process JSON output with jq for advanced filtering:
+
+```bash
+ccusage session --jq '.sessions[] | select(.totalCost > 0.5)'
+```
+
+<Tip>
+The `--id` flag is useful for debugging specific conversation sessions or tracking costs for particular tasks.
+</Tip>
+
+## Common Flags
+
+<ResponseField name="--id, -i" type="string">
+  Load usage data for a specific session ID
+</ResponseField>
+
+<ResponseField name="--since, -s" type="string">
+  Filter from date (YYYYMMDD format)
+</ResponseField>
+
+<ResponseField name="--until, -u" type="string">
+  Filter until date (YYYYMMDD format)
+</ResponseField>
+
+<ResponseField name="--breakdown, -b" type="boolean">
+  Show per-model cost breakdown (default: false)
+</ResponseField>
+
+<ResponseField name="--json, -j" type="boolean">
+  Output in JSON format (default: false)
+</ResponseField>
+
+<ResponseField name="--jq, -q" type="string">
+  Process JSON output with jq command (requires jq binary, implies --json)
+</ResponseField>
+
+<ResponseField name="--mode, -m" type="enum">
+  Cost calculation mode: `auto` (use pre-calculated if available), `calculate` (always calculate from tokens), `display` (always use pre-calculated)
+</ResponseField>
+
+<ResponseField name="--timezone, -z" type="string">
+  Timezone for date/time formatting (e.g., UTC, America/New_York, Asia/Tokyo). Default: system timezone
+</ResponseField>
+
+<ResponseField name="--locale, -l" type="string">
+  Locale for date/time formatting (e.g., en-US, ja-JP, de-DE). Default: en-US
+</ResponseField>
+
+<ResponseField name="--compact" type="boolean">
+  Force compact mode for narrow displays
+</ResponseField>
+
+<ResponseField name="--offline, -O" type="boolean">
+  Use cached pricing data instead of fetching from API (default: false)
+</ResponseField>
+
+<ResponseField name="--debug, -d" type="boolean">
+  Show pricing mismatch information for debugging (default: false)
+</ResponseField>
+
+## Examples
+
+### Most Recent Sessions
+
+```bash
+ccusage session --order desc
+```
+
+### Expensive Sessions
+
+```bash
+ccusage session --jq '.sessions[] | select(.totalCost > 1.0) | {sessionId, totalCost}'
+```
+
+### Session with Full Breakdown
+
+```bash
+ccusage session --id abc123-def456 --breakdown
+```
+
+### Sessions This Week
+
+```bash
+ccusage session --since 20250310 --until 20250316
+```
+
+## Understanding Sessions
+
+### Session ID Format
+
+Sessions are identified by their Claude Code session ID, which appears in the format:
+
+```
+project/directory-name/abc123-def456
+```
+
+In table output, only the last two parts are shown for brevity (`abc123-def456`).
+
+### Project Path
+
+Each session includes a `projectPath` field in JSON output, showing the full path to the project directory where the session took place.
+
+### Last Activity
+
+The `lastActivity` timestamp shows when the session was last used, helping you identify recent vs. old sessions.
+
+### Session Grouping
+
+<Warning>
+**Important Terminology**: What we call "sessionId" in reports is actually derived from the project directory structure (project/directory). The true Claude Code session ID is found in the JSONL filename and entries.
+
+File structure:
+```
+projects/{project}/{sessionId}.jsonl
+```
+
+Where:
+- `{project}` is the project directory name (used for grouping in reports)
+- `{sessionId}.jsonl` is the actual Claude Code session ID
+</Warning>
+
+## Use Cases
+
+### Track Individual Tasks
+
+Find the cost of a specific coding session:
+
+```bash
+ccusage session --id abc123-def456
+```
+
+### Identify Expensive Sessions
+
+Find sessions that exceeded your budget:
+
+```bash
+ccusage session --jq '.sessions | sort_by(.totalCost) | reverse | .[0:5]'
+```
+
+### Project-Level Analysis
+
+Filter sessions by project path:
+
+```bash
+ccusage session --jq '.sessions[] | select(.projectPath | contains("myproject"))'
+```
+
+### Model Usage Patterns
+
+See which models were used in each session:
+
+```bash
+ccusage session --breakdown
+```
+
+## Compact Mode
+
+Session reports support compact mode, though the Last Activity column requires more width:
+
+```bash
+ccusage session --compact
+```
+
+In narrow terminals, some information may be truncated for readability.

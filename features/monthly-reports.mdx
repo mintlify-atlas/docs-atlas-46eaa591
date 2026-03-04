@@ -1,0 +1,235 @@
+---
+title: Monthly Reports
+description: View aggregated monthly usage statistics for long-term cost tracking
+---
+
+The `monthly` command aggregates your Claude Code usage by month, providing a high-level view of your token consumption and costs over extended periods.
+
+## Basic Usage
+
+```bash
+ccusage monthly
+```
+
+This displays a table showing your usage for each month, including:
+
+- Input and output tokens
+- Cache creation and read tokens
+- Total tokens consumed
+- Total cost in USD
+- Models used
+
+## Command Options
+
+### Filter by Date Range
+
+Use `--since` and `--until` to filter results to a specific date range:
+
+```bash
+ccusage monthly --since 20250101 --until 20250331
+```
+
+<Note>
+Dates must be in `YYYYMMDD` format. For monthly reports, you typically use the first day of months (e.g., `20250101` for January 2025).
+</Note>
+
+### Model Breakdown
+
+See per-model costs within each month:
+
+```bash
+ccusage monthly --breakdown
+```
+
+This shows detailed token usage and costs for each model used during the month.
+
+### JSON Output
+
+Export data in JSON format:
+
+```bash
+ccusage monthly --json
+```
+
+<CodeGroup>
+```json Standard Output
+{
+  "monthly": [
+    {
+      "month": "202503",
+      "inputTokens": 1250000,
+      "outputTokens": 340000,
+      "cacheCreationTokens": 89000,
+      "cacheReadTokens": 2500000,
+      "totalTokens": 4179000,
+      "totalCost": 12.45,
+      "modelsUsed": [
+        "claude-sonnet-4-20250514",
+        "claude-opus-4-20250514"
+      ],
+      "modelBreakdowns": [...]
+    }
+  ],
+  "totals": {
+    "inputTokens": 1250000,
+    "outputTokens": 340000,
+    "cacheCreationTokens": 89000,
+    "cacheReadTokens": 2500000,
+    "totalTokens": 4179000,
+    "totalCost": 12.45
+  }
+}
+```
+
+```bash jq Example
+ccusage monthly --jq '.monthly[] | {month, totalCost}'
+```
+</CodeGroup>
+
+### jq Integration
+
+Process JSON output with jq for advanced analysis:
+
+```bash
+ccusage monthly --jq '.monthly | map({month, cost: .totalCost}) | sort_by(.cost) | reverse'
+```
+
+<Tip>
+Monthly reports are perfect for tracking costs over quarters or entire years. Combine with jq to create custom reports.
+</Tip>
+
+## Common Flags
+
+<ResponseField name="--since, -s" type="string">
+  Filter from date (YYYYMMDD format)
+</ResponseField>
+
+<ResponseField name="--until, -u" type="string">
+  Filter until date (YYYYMMDD format)
+</ResponseField>
+
+<ResponseField name="--breakdown, -b" type="boolean">
+  Show per-model cost breakdown (default: false)
+</ResponseField>
+
+<ResponseField name="--json, -j" type="boolean">
+  Output in JSON format (default: false)
+</ResponseField>
+
+<ResponseField name="--jq, -q" type="string">
+  Process JSON output with jq command (requires jq binary, implies --json)
+</ResponseField>
+
+<ResponseField name="--mode, -m" type="enum">
+  Cost calculation mode: `auto` (use pre-calculated if available), `calculate` (always calculate from tokens), `display` (always use pre-calculated)
+</ResponseField>
+
+<ResponseField name="--timezone, -z" type="string">
+  Timezone for date grouping (e.g., UTC, America/New_York, Asia/Tokyo). Default: system timezone
+</ResponseField>
+
+<ResponseField name="--locale, -l" type="string">
+  Locale for date/time formatting (e.g., en-US, ja-JP, de-DE). Default: en-US
+</ResponseField>
+
+<ResponseField name="--compact" type="boolean">
+  Force compact mode for narrow displays
+</ResponseField>
+
+<ResponseField name="--offline, -O" type="boolean">
+  Use cached pricing data instead of fetching from API (default: false)
+</ResponseField>
+
+<ResponseField name="--debug, -d" type="boolean">
+  Show pricing mismatch information for debugging (default: false)
+</ResponseField>
+
+## Examples
+
+### First Quarter 2025
+
+```bash
+ccusage monthly --since 20250101 --until 20250331
+```
+
+### Full Year with Model Breakdown
+
+```bash
+ccusage monthly --since 20250101 --until 20251231 --breakdown
+```
+
+### Top 3 Most Expensive Months
+
+```bash
+ccusage monthly --jq '.monthly | sort_by(.totalCost) | reverse | .[0:3]'
+```
+
+### Export to CSV
+
+```bash
+ccusage monthly --jq -r '.monthly[] | [.month, .totalCost] | @csv' > monthly-costs.csv
+```
+
+## Understanding Monthly Aggregation
+
+### Month Format
+
+Months are displayed in `YYYYMM` format (e.g., `202503` for March 2025).
+
+### Timezone Considerations
+
+Monthly aggregation respects the `--timezone` flag. Usage is grouped by month in the specified timezone:
+
+```bash
+ccusage monthly --timezone America/New_York
+```
+
+This can affect which month usage is attributed to if you work across midnight in different timezones.
+
+### Model Usage
+
+The `modelsUsed` array shows all models used during the month. Use `--breakdown` to see per-model costs:
+
+```bash
+ccusage monthly --breakdown
+```
+
+## Use Cases
+
+### Budget Tracking
+
+Monitor monthly spending to stay within budget:
+
+```bash
+ccusage monthly --jq '.monthly[] | select(.totalCost > 50) | {month, totalCost}'
+```
+
+### Cost Trends
+
+Identify usage patterns over time:
+
+```bash
+ccusage monthly --json > monthly-usage.json
+```
+
+### Model Adoption
+
+Track which models you're using each month:
+
+```bash
+ccusage monthly --breakdown
+```
+
+<Warning>
+Monthly reports aggregate all usage data, which can be slow for large datasets. Consider using date filters to limit the range.
+</Warning>
+
+## Compact Mode
+
+Like daily reports, monthly reports support compact mode for narrow terminals:
+
+```bash
+ccusage monthly --compact
+```
+
+When in compact mode, cache metrics and total tokens are hidden. Expand your terminal width to see all columns.

@@ -1,0 +1,286 @@
+---
+title: statusline
+description: Display compact status line for Claude Code hooks with hybrid caching (Beta)
+---
+
+<Warning>
+  This command is in Beta. The API and behavior may change in future versions.
+</Warning>
+
+## Overview
+
+The `statusline` command displays a compact, single-line status for integration with Claude Code hooks and shell prompts. It shows real-time information about the current session including model, costs, burn rate, and context usage.
+
+The command uses a hybrid caching system that combines:
+- **Time-based expiry**: Cache expires after a configurable refresh interval
+- **File modification detection**: Immediate invalidation when transcript file changes
+
+## Usage
+
+<CodeGroup>
+```bash From stdin (hook integration)
+echo '{"session_id":"...","transcript_path":"...","model":{...}}' | ccusage statusline
+```
+
+```bash Disable caching
+ccusage statusline --no-cache < hook-data.json
+```
+
+```bash Visual burn rate indicator
+ccusage statusline --visual-burn-rate emoji < hook-data.json
+```
+
+```bash Custom refresh interval
+ccusage statusline --refresh-interval 10 < hook-data.json
+```
+
+```bash Show both cost sources
+ccusage statusline --cost-source both < hook-data.json
+```
+</CodeGroup>
+
+## Flags
+
+### Command-Specific Flags
+
+<ParamField path="--visual-burn-rate" type="enum" default="off">
+  Controls the visualization of the burn rate status:
+  - `off`: No visual indicator
+  - `emoji`: Show emoji indicator (🟢/⚠️/🚨)
+  - `text`: Show text status (Normal/Moderate/High)
+  - `emoji-text`: Show both emoji and text
+  
+  **Short flag:** `-B`
+  
+  **Choices:** `off`, `emoji`, `text`, `emoji-text`
+</ParamField>
+
+<ParamField path="--cost-source" type="enum" default="auto">
+  Session cost source:
+  - `auto`: Prefer Claude Code cost, fallback to ccusage calculation
+  - `ccusage`: Always calculate using ccusage
+  - `cc`: Always use Claude Code's pre-calculated cost
+  - `both`: Show both costs side by side for comparison
+  
+  **Choices:** `auto`, `ccusage`, `cc`, `both`
+</ParamField>
+
+<ParamField path="--cache" type="boolean" default="true">
+  Enable cache for status line output. Improves performance by reusing results when data hasn't changed.
+  
+  **Negatable:** Use `--no-cache` to disable
+</ParamField>
+
+<ParamField path="--refresh-interval" type="number" default="30">
+  Refresh interval in seconds for cache expiry. Cache is also invalidated immediately when transcript file is modified.
+  
+  **Default:** 30 seconds
+</ParamField>
+
+<ParamField path="--context-low-threshold" type="number" default="50">
+  Context usage percentage below which status is shown in green (0-100).
+  
+  **Default:** 50
+  
+  **Validation:** Must be less than `--context-medium-threshold`
+</ParamField>
+
+<ParamField path="--context-medium-threshold" type="number" default="80">
+  Context usage percentage below which status is shown in yellow (0-100). Above this threshold, status is shown in red.
+  
+  **Default:** 80
+  
+  **Validation:** Must be greater than `--context-low-threshold`
+</ParamField>
+
+<ParamField path="--offline" type="boolean" default="true">
+  Use cached pricing data for Claude models. Default is true for better performance in statusline.
+  
+  **Short flag:** `-O`
+  
+  **Negatable:** Use `--no-offline` to fetch fresh pricing
+</ParamField>
+
+### Common Flags
+
+<ParamField path="--config" type="string">
+  Path to configuration file. Default: auto-discovery.
+</ParamField>
+
+<ParamField path="--debug" type="boolean" default="false">
+  Show debug information.
+  
+  **Short flag:** `-d`
+</ParamField>
+
+## Input Format
+
+The command expects JSON input from stdin matching Claude Code's hook data format:
+
+```json
+{
+  "session_id": "abc123-def456-ghi789",
+  "transcript_path": "/path/to/transcript.jsonl",
+  "model": {
+    "id": "claude-sonnet-4-20250514",
+    "display_name": "Claude 4 Sonnet"
+  },
+  "cost": {
+    "total_cost_usd": 0.85
+  },
+  "context_window": {
+    "total_input_tokens": 125000,
+    "context_window_size": 200000
+  }
+}
+```
+
+### Required Fields
+
+- `session_id`: Unique session identifier
+- `transcript_path`: Path to transcript JSONL file
+- `model.id`: Model identifier
+- `model.display_name`: Human-readable model name
+
+### Optional Fields
+
+- `cost.total_cost_usd`: Pre-calculated cost from Claude Code
+- `context_window.total_input_tokens`: Current context tokens
+- `context_window.context_window_size`: Maximum context window size
+
+## Output Format
+
+Single-line status with emoji indicators:
+
+```
+🤖 Claude 4 Sonnet | 💰 $0.85 session / $2.50 today / $0.85 block (2h 30m left) | 🔥 $0.34/hr 🟢 | 🧠 125,000 (62%)
+```
+
+### Status Components
+
+1. **🤖 Model**: Display name of the model
+2. **💰 Costs**:
+   - Session cost (from Claude Code or calculated)
+   - Today's total cost
+   - Current block cost and time remaining
+3. **🔥 Burn Rate** (if `--visual-burn-rate` enabled):
+   - Cost per hour
+   - Status indicator (🟢 Normal / ⚠️ Moderate / 🚨 High)
+4. **🧠 Context**: Current tokens and percentage of limit
+   - Green: < 50% (or `--context-low-threshold`)
+   - Yellow: 50-80% (or `--context-medium-threshold`)
+   - Red: > 80%
+
+### Burn Rate Thresholds
+
+- **🟢 Normal**: < 2,000 tokens/minute
+- **⚠️ Moderate**: 2,000-5,000 tokens/minute
+- **🚨 High**: > 5,000 tokens/minute
+
+## Caching Behavior
+
+The hybrid caching system validates cache using two mechanisms:
+
+1. **Time-based**: Cache expires after `--refresh-interval` seconds
+2. **File-based**: Cache invalidates immediately when transcript file is modified
+
+This ensures real-time updates while maintaining good performance.
+
+### Cache Invalidation
+
+- When transcript file modification time changes
+- When refresh interval expires
+- When cache is manually disabled with `--no-cache`
+
+### Process Coordination
+
+The command uses a semaphore file (stored in system temp directory) to prevent concurrent updates:
+- If another process is updating, returns cached output
+- Includes deadlock protection by checking if updating process is still alive
+
+## Examples
+
+### Basic usage with hook data
+
+```bash
+echo '{"session_id":"123","transcript_path":"/path","model":{"id":"claude-sonnet-4","display_name":"Sonnet 4"}}' | ccusage statusline
+```
+
+### Show emoji burn rate indicator
+
+```bash
+ccusage statusline --visual-burn-rate emoji < hook-data.json
+```
+
+### Compare cost sources
+
+```bash
+ccusage statusline --cost-source both < hook-data.json
+```
+
+### Disable caching for testing
+
+```bash
+ccusage statusline --no-cache < hook-data.json
+```
+
+### Custom context thresholds
+
+```bash
+ccusage statusline --context-low-threshold 30 --context-medium-threshold 70 < hook-data.json
+```
+
+### Faster refresh for development
+
+```bash
+ccusage statusline --refresh-interval 5 < hook-data.json
+```
+
+## Integration with Claude Code Hooks
+
+This command is designed for integration with Claude Code's hook system. Configure your hook to pipe data to statusline:
+
+```bash
+# Example hook configuration
+{
+  "hooks": {
+    "on_message": "jq -c '.hook_data' | ccusage statusline"
+  }
+}
+```
+
+## Performance Considerations
+
+- **Default offline mode**: Avoids API calls for pricing data
+- **Hybrid caching**: Reduces computation while staying responsive
+- **Process coordination**: Prevents concurrent updates from multiple hook calls
+- **Stale output on error**: Returns last known good state if update fails
+
+<Note>
+  Cache files are stored in system temp directory under `ccusage-semaphore/`. They are session-specific and automatically managed.
+</Note>
+
+## Troubleshooting
+
+### No output or errors
+
+- Ensure valid JSON input is provided via stdin
+- Check that required fields (session_id, transcript_path, model) are present
+- Use `--debug` flag to see error details
+
+### Stale data
+
+- Reduce `--refresh-interval` for more frequent updates
+- Use `--no-cache` to bypass caching entirely
+- Check that transcript file path is correct
+
+### Context percentage not showing
+
+- Ensure `context_window` data is provided in hook input
+- Or verify transcript file is accessible for calculation
+
+## Related Commands
+
+- [blocks](/api/commands/blocks) - View detailed billing blocks with burn rate
+- [session](/api/commands/session) - View session-level usage statistics
+- [daily](/api/commands/daily) - View daily usage reports

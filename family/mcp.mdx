@@ -1,0 +1,236 @@
+---
+title: '@ccusage/mcp'
+description: MCP server for real-time ccusage integration
+---
+
+# @ccusage/mcp
+
+Model Context Protocol (MCP) server implementation for ccusage - provides Claude Code usage data through the MCP protocol for real-time integration with Claude Desktop and other MCP-compatible tools.
+
+## Quick Start
+
+<CodeGroup>
+```bash bunx (recommended)
+bunx @ccusage/mcp@latest
+```
+
+```bash npx
+npx @ccusage/mcp@latest
+```
+
+```bash HTTP transport
+bunx @ccusage/mcp@latest -- --type http --port 8080
+```
+</CodeGroup>
+
+## What is MCP?
+
+The [Model Context Protocol](https://modelcontextprotocol.io/) is an open standard that enables AI applications to securely access external data sources and tools. The `@ccusage/mcp` server exposes ccusage data and functionality through this protocol.
+
+## Installation
+
+### Claude Desktop Integration
+
+Add to your Claude Desktop MCP configuration file:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
+**Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "ccusage": {
+      "command": "npx",
+      "args": ["@ccusage/mcp@latest"],
+      "type": "stdio"
+    }
+  }
+}
+```
+
+Restart Claude Desktop to activate the integration.
+
+### Claude Code Integration
+
+Add the MCP server to Claude Code:
+
+```sh
+claude mcp add ccusage npx -- @ccusage/mcp@latest
+```
+
+## Available Tools
+
+Once configured, the following tools become available in Claude Desktop:
+
+<CardGroup cols={2}>
+  <Card title="daily" icon="calendar-day">
+    Get daily usage reports with token counts and costs
+  </Card>
+  
+  <Card title="monthly" icon="calendar">
+    Get monthly aggregated usage reports
+  </Card>
+  
+  <Card title="session" icon="comments">
+    Get session-based usage reports grouped by conversation
+  </Card>
+  
+  <Card title="blocks" icon="clock">
+    Get 5-hour billing blocks usage reports
+  </Card>
+</CardGroup>
+
+## Usage in Claude Desktop
+
+Once configured, you can ask Claude Desktop questions like:
+
+- "Show me my Claude Code usage from last week"
+- "What are my total costs for this month?"
+- "Which models did I use yesterday?"
+- "Show my most expensive conversation sessions"
+
+Claude Desktop will automatically use the MCP tools to fetch and display your usage data.
+
+## Transport Options
+
+The MCP server supports multiple transport protocols:
+
+### STDIO Transport (Default)
+
+Used for Claude Desktop integration:
+
+```json
+{
+  "command": "npx",
+  "args": ["@ccusage/mcp@latest"],
+  "type": "stdio"
+}
+```
+
+### HTTP Transport
+
+For web-based integrations:
+
+```bash
+bunx @ccusage/mcp@latest -- --type http --port 8080
+```
+
+Options:
+- `--type http` - Enable HTTP transport
+- `--port <number>` - Specify port (default: 3000)
+- `--host <string>` - Specify host (default: localhost)
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Real-time Data" icon="bolt">
+    Access current usage data directly from Claude Desktop
+  </Card>
+  
+  <Card title="Multiple Reports" icon="chart-mixed">
+    Daily, monthly, session, and blocks reports available
+  </Card>
+  
+  <Card title="Secure Access" icon="shield">
+    Local data access with no external API calls required
+  </Card>
+  
+  <Card title="Standard Protocol" icon="plug">
+    Uses open MCP standard for broad compatibility
+  </Card>
+</CardGroup>
+
+## Data Source
+
+The MCP server reads from the same data sources as the ccusage CLI:
+
+- **Claude Code**: `~/.claude/projects/` or `~/.config/claude/projects/`
+- Supports custom paths via `CLAUDE_CONFIG_DIR` environment variable
+- Automatic discovery of both old and new Claude data directories
+
+## Example Queries
+
+Here are some example questions you can ask Claude Desktop:
+
+### Cost Analysis
+
+> "What were my Claude Code costs last month?"
+
+Claude will use the `monthly` tool to fetch and display your monthly usage.
+
+### Model Usage
+
+> "Which Claude models did I use this week?"
+
+Claude will use the `daily` tool with date filters to show model usage.
+
+### Session Breakdown
+
+> "Show me my most expensive conversation sessions"
+
+Claude will use the `session` tool to list sessions sorted by cost.
+
+### Billing Windows
+
+> "Am I close to my 5-hour block limit?"
+
+Claude will use the `blocks` tool to show your current billing window usage.
+
+## Configuration
+
+The MCP server respects the same environment variables as ccusage:
+
+| Variable | Description | Default |
+|----------|-------------|----------|
+| `CLAUDE_CONFIG_DIR` | Custom Claude data directory paths | `~/.claude,~/.config/claude` |
+| `LOG_LEVEL` | Control logging verbosity (0-5) | - |
+
+## Troubleshooting
+
+### Server Not Appearing in Claude Desktop
+
+1. Check your config file syntax is valid JSON
+2. Ensure the path to `claude_desktop_config.json` is correct
+3. Restart Claude Desktop after making changes
+4. Check the Claude Desktop logs for errors
+
+### Permission Issues
+
+- Ensure the MCP server has read access to your Claude data directories
+- On macOS/Linux, check file permissions with `ls -la ~/.claude/`
+
+### Connection Errors
+
+For HTTP transport:
+- Verify the port is not already in use
+- Check firewall settings allow the connection
+- Try a different port with `--port` flag
+
+## Architecture
+
+The MCP server is built with:
+
+- **@hono/mcp** - MCP implementation for Hono
+- **@modelcontextprotocol/sdk** - Official MCP SDK
+- **Hono** - Fast, lightweight web framework
+- **ccusage** - Core usage analysis functionality
+
+## Links
+
+<CardGroup cols={2}>
+  <Card title="npm Package" icon="npm" href="https://www.npmjs.com/package/@ccusage/mcp">
+    View on npm registry
+  </Card>
+  
+  <Card title="MCP Specification" icon="book" href="https://modelcontextprotocol.io/">
+    Learn about Model Context Protocol
+  </Card>
+  
+  <Card title="ccusage Family" icon="layer-group" href="/family/overview">
+    Explore all related tools
+  </Card>
+  
+  <Card title="Claude Desktop" icon="desktop" href="https://claude.ai/download">
+    Download Claude Desktop
+  </Card>
+</CardGroup>

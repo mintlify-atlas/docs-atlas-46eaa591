@@ -1,0 +1,298 @@
+---
+title: Cost Calculation Modes
+description: Control how ccusage calculates costs with auto, calculate, and display modes
+---
+
+ccusage supports three different cost calculation modes to give you control over how token usage is converted to cost estimates. These modes are available on all commands via the `--mode` flag.
+
+## Mode Overview
+
+<Tabs>
+  <Tab title="auto (default)">
+    Uses pre-calculated costs when available in the data, falls back to calculating from tokens using LiteLLM pricing when costs are missing.
+    
+    **Best for:** General usage, balanced accuracy
+  </Tab>
+  <Tab title="calculate">
+    Always calculates costs from token counts using current LiteLLM model pricing, ignoring any pre-calculated costs in the data.
+    
+    **Best for:** Getting latest pricing, debugging cost discrepancies
+  </Tab>
+  <Tab title="display">
+    Always uses pre-calculated costs from the data, shows $0.00 for entries without cost data.
+    
+    **Best for:** Offline usage, seeing exact historical costs
+  </Tab>
+</Tabs>
+
+## Mode Details
+
+### Auto Mode (Default)
+
+```bash
+ccusage daily --mode auto
+# or simply
+ccusage daily
+```
+
+Auto mode provides the most accurate cost estimates by:
+
+1. Using `costUSD` values when present in the JSONL data
+2. Calculating costs from tokens when `costUSD` is missing
+3. Falling back to $0.00 when neither cost nor model information is available
+
+<CodeGroup>
+```typescript Implementation
+// From src/data-loader.ts:629
+export async function calculateCostForEntry(
+  data: UsageData,
+  mode: CostMode,
+  fetcher: PricingFetcher,
+): Promise<number> {
+  if (mode === 'auto') {
+    // Auto mode: use costUSD if available, otherwise calculate
+    if (data.costUSD != null) {
+      return data.costUSD;
+    }
+
+    if (data.message.model != null) {
+      return Result.unwrap(
+        fetcher.calculateCostFromTokens(data.message.usage, data.message.model),
+        0,
+      );
+    }
+
+    return 0;
+  }
+  // ...
+}
+```
+
+```typescript Type Definition
+// From src/_types.ts:140
+export const CostModes = ['auto', 'calculate', 'display'] as const;
+export type CostMode = TupleToUnion<typeof CostModes>;
+```
+</CodeGroup>
+
+**When to use:**
+- Default usage (most common)
+- You want accurate costs that match what Claude actually charged
+- Analyzing historical data with pre-calculated costs
+
+### Calculate Mode
+
+```bash
+ccusage daily --mode calculate
+```
+
+Calculate mode always recomputes costs from token counts:
+
+1. Fetches current model pricing from LiteLLM
+2. Calculates cost as: `(inputTokens × inputPrice) + (outputTokens × outputPrice) + ...`
+3. Ignores any `costUSD` values in the data
+4. Shows $0.00 if model information is missing
+
+**When to use:**
+- You want to see costs based on current pricing
+- Debugging discrepancies between stored and calculated costs
+- Analyzing "what if" scenarios with updated pricing
+- Testing cost calculation logic
+
+<Warning>
+Calculate mode requires network access to fetch pricing data unless you use `--offline` flag (Claude models only).
+</Warning>
+
+### Display Mode
+
+```bash
+ccusage daily --mode display
+```
+
+Display mode shows only pre-calculated costs:
+
+1. Uses `costUSD` values from the JSONL data
+2. Shows $0.00 for entries without `costUSD`
+3. Never fetches pricing data or calculates costs
+4. Works completely offline
+
+**When to use:**
+- Offline environments without network access
+- You want to see exactly what was recorded historically
+- Avoiding pricing API calls for performance
+- Auditing pre-calculated costs
+
+<Note>
+Display mode is the only mode that works without any network access. It never attempts to fetch pricing data from LiteLLM.
+</Note>
+
+## Practical Examples
+
+### Comparing Modes
+
+<CodeGroup>
+```bash Auto Mode
+ccusage daily --since 20250301 --until 20250307
+# Uses mix of pre-calculated and computed costs
+```
+
+```bash Calculate Mode
+ccusage daily --since 20250301 --until 20250307 --mode calculate
+# All costs recalculated from tokens
+```
+
+```bash Display Mode
+ccusage daily --since 20250301 --until 20250307 --mode display
+# Only shows pre-calculated costs
+```
+</CodeGroup>
+
+### Debugging Cost Discrepancies
+
+If you notice unexpected costs, compare modes:
+
+```bash
+# See stored costs
+ccusage daily --mode display --json > stored-costs.json
+
+# See calculated costs
+ccusage daily --mode calculate --json > calculated-costs.json
+
+# Compare with jq
+jq -s '.[0] as $stored | .[1] as $calc | 
+  ($stored | map({date, cost: .totalCost})) as $s |
+  ($calc | map({date, cost: .totalCost})) as $c |
+  [$s, $c] | transpose | map({date: .[0].date, stored: .[0].cost, calculated: .[1].cost})' \
+  stored-costs.json calculated-costs.json
+```
+
+### Offline Usage
+
+For environments without network access:
+
+```bash
+# Display mode works offline for all models
+ccusage daily --mode display
+
+# Auto mode with offline flag (Claude models only)
+ccusage daily --mode auto --offline
+
+# Calculate mode with offline flag (Claude models only)
+ccusage daily --mode calculate --offline
+```
+
+## Cost Calculation Details
+
+### Token Types and Pricing
+
+ccusage tracks four token types, each with different pricing:
+
+<ResponseField name="inputTokens" type="number">
+  Standard input tokens - base input price
+</ResponseField>
+
+<ResponseField name="outputTokens" type="number">
+  Generated output tokens - typically 3-5x input price
+</ResponseField>
+
+<ResponseField name="cacheCreationTokens" type="number">
+  Tokens used to create prompt cache - same as input price
+</ResponseField>
+
+<ResponseField name="cacheReadTokens" type="number">
+  Tokens read from prompt cache - typically 10% of input price
+</ResponseField>
+
+### Calculation Formula
+
+When using `calculate` or `auto` mode, costs are computed as:
+
+```typescript
+// From src/calculate-cost.ts and pricing-fetcher integration
+totalCost = 
+  (inputTokens × inputPricePerToken) +
+  (outputTokens × outputPricePerToken) +
+  (cacheCreationTokens × cacheWritePricePerToken) +
+  (cacheReadTokens × cacheReadPricePerToken)
+```
+
+Pricing data comes from [LiteLLM's pricing database](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json).
+
+## Performance Considerations
+
+<Tabs>
+  <Tab title="display">
+    **Fastest** - No network calls, no calculations
+    
+    ✅ Instant results  
+    ✅ Works offline  
+    ❌ May show $0.00 for missing costs
+  </Tab>
+  <Tab title="auto">
+    **Balanced** - Minimal network calls
+    
+    ✅ Only fetches pricing when needed  
+    ✅ Uses cached costs when available  
+    ⚠️ May need network for some entries
+  </Tab>
+  <Tab title="calculate">
+    **Slowest** - Always fetches pricing
+    
+    ⚠️ Fetches pricing for all entries  
+    ⚠️ Requires network access  
+    ✅ Always uses latest pricing
+  </Tab>
+</Tabs>
+
+## Mode Selection Guide
+
+<CodeGroup>
+```bash Daily Reports
+# Default - balanced accuracy
+ccusage daily
+
+# Force recalculation for latest prices
+ccusage daily --mode calculate
+
+# Offline usage
+ccusage daily --mode display
+```
+
+```bash Monthly Analysis
+# Historical costs as recorded
+ccusage monthly --mode display
+
+# Current pricing applied retroactively
+ccusage monthly --mode calculate
+```
+
+```bash Cost Auditing
+# Compare stored vs calculated
+ccusage daily --mode display > stored.txt
+ccusage daily --mode calculate > calculated.txt
+diff stored.txt calculated.txt
+```
+</CodeGroup>
+
+## API Usage
+
+When using ccusage as a library, you can specify the mode programmatically:
+
+```typescript
+import { loadDailyData } from 'ccusage/data-loader';
+
+// Auto mode (default)
+const autoData = await loadDailyData({ mode: 'auto' });
+
+// Calculate mode
+const calcData = await loadDailyData({ mode: 'calculate' });
+
+// Display mode
+const displayData = await loadDailyData({ mode: 'display' });
+```
+
+See [Library Usage](/advanced/library-usage) for more details on using ccusage as a library.
+
+<Note>
+The mode affects all cost calculations throughout the application, including totals, breakdowns, and per-session costs.
+</Note>

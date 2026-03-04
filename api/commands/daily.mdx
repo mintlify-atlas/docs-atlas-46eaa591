@@ -1,0 +1,275 @@
+---
+title: daily
+description: Show usage report grouped by date
+---
+
+## Overview
+
+The `daily` command displays Claude Code usage statistics aggregated by day. It shows token usage (input, output, cache creation, and cache read tokens), costs, and models used for each day.
+
+## Usage
+
+<CodeGroup>
+```bash Basic Usage
+ccusage daily
+```
+
+```bash Filter by date range
+ccusage daily --since 20240301 --until 20240331
+```
+
+```bash JSON output
+ccusage daily --json
+```
+
+```bash Show by project/instance
+ccusage daily --instances
+```
+
+```bash Filter specific project
+ccusage daily --project myproject
+```
+
+```bash With model breakdown
+ccusage daily --breakdown
+```
+</CodeGroup>
+
+## Flags
+
+### Command-Specific Flags
+
+<ParamField path="--instances" type="boolean" default="false">
+  Show usage breakdown by project/instance. When enabled, groups data by project directories and displays each project separately.
+  
+  **Short flag:** `-i`
+</ParamField>
+
+<ParamField path="--project" type="string">
+  Filter to specific project name. Only shows usage data for the specified project.
+  
+  **Short flag:** `-p`
+</ParamField>
+
+### Common Flags
+
+<ParamField path="--since" type="string">
+  Filter from date in YYYYMMDD format (e.g., 20240301).
+  
+  **Short flag:** `-s`
+</ParamField>
+
+<ParamField path="--until" type="string">
+  Filter until date in YYYYMMDD format (e.g., 20240331).
+  
+  **Short flag:** `-u`
+</ParamField>
+
+<ParamField path="--json" type="boolean" default="false">
+  Output in JSON format instead of a formatted table.
+  
+  **Short flag:** `-j`
+</ParamField>
+
+<ParamField path="--jq" type="string">
+  Process JSON output with jq command. Requires jq binary installed. Implies --json.
+  
+  **Short flag:** `-q`
+  
+  **Example:** `ccusage daily --jq '.daily[] | select(.totalCost > 0.10)'`
+</ParamField>
+
+<ParamField path="--mode" type="enum" default="auto">
+  Cost calculation mode:
+  - `auto`: Use costUSD if exists, otherwise calculate from tokens
+  - `calculate`: Always calculate costs from token counts
+  - `display`: Always use pre-calculated costUSD values
+  
+  **Short flag:** `-m`
+  
+  **Choices:** `auto`, `calculate`, `display`
+</ParamField>
+
+<ParamField path="--breakdown" type="boolean" default="false">
+  Show per-model cost breakdown. Displays detailed token usage for each model used.
+  
+  **Short flag:** `-b`
+</ParamField>
+
+<ParamField path="--offline" type="boolean" default="false">
+  Use cached pricing data for Claude models instead of fetching from API.
+  
+  **Short flag:** `-O`
+  
+  **Negatable:** Use `--no-offline` to disable
+</ParamField>
+
+<ParamField path="--order" type="enum" default="asc">
+  Sort order:
+  - `asc`: Oldest first
+  - `desc`: Newest first
+  
+  **Short flag:** `-o`
+  
+  **Choices:** `asc`, `desc`
+</ParamField>
+
+<ParamField path="--debug" type="boolean" default="false">
+  Show pricing mismatch information for debugging.
+  
+  **Short flag:** `-d`
+</ParamField>
+
+<ParamField path="--debug-samples" type="number" default="5">
+  Number of sample discrepancies to show in debug output.
+</ParamField>
+
+<ParamField path="--timezone" type="string">
+  Timezone for date grouping (e.g., UTC, America/New_York, Asia/Tokyo). Default: system timezone.
+  
+  **Short flag:** `-z`
+</ParamField>
+
+<ParamField path="--locale" type="string" default="en-US">
+  Locale for date/time formatting (e.g., en-US, ja-JP, de-DE).
+  
+  **Short flag:** `-l`
+</ParamField>
+
+<ParamField path="--compact" type="boolean" default="false">
+  Force compact mode for narrow displays (better for screenshots).
+</ParamField>
+
+<ParamField path="--config" type="string">
+  Path to configuration file. Default: auto-discovery.
+</ParamField>
+
+<ParamField path="--color" type="boolean">
+  Enable colored output (default: auto). FORCE_COLOR=1 has the same effect.
+</ParamField>
+
+<ParamField path="--no-color" type="boolean">
+  Disable colored output (default: auto). NO_COLOR=1 has the same effect.
+</ParamField>
+
+## Output Formats
+
+### Table Output (Default)
+
+Displays a formatted table with columns:
+- **Date**: Day in YYYY-MM-DD format
+- **Input**: Input tokens
+- **Output**: Output tokens
+- **Cache Creation**: Cache creation tokens
+- **Cache Read**: Cache read tokens
+- **Total**: Total tokens
+- **Cost**: Total cost in USD
+- **Models**: Models used that day
+
+Includes a totals row at the bottom.
+
+<Note>
+  In narrow terminals or with `--compact` flag, some columns (cache metrics and total tokens) may be hidden. A message will indicate compact mode is active.
+</Note>
+
+### JSON Output
+
+With `--json` flag, outputs structured JSON:
+
+<CodeGroup>
+```json Standard Format
+{
+  "daily": [
+    {
+      "date": "2024-03-01",
+      "inputTokens": 125000,
+      "outputTokens": 15000,
+      "cacheCreationTokens": 50000,
+      "cacheReadTokens": 10000,
+      "totalTokens": 200000,
+      "totalCost": 0.85,
+      "modelsUsed": ["claude-sonnet-4-20250514"],
+      "modelBreakdowns": [
+        {
+          "model": "claude-sonnet-4-20250514",
+          "inputTokens": 125000,
+          "outputTokens": 15000,
+          "cacheCreationTokens": 50000,
+          "cacheReadTokens": 10000,
+          "totalCost": 0.85
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "inputTokens": 125000,
+    "outputTokens": 15000,
+    "cacheCreationTokens": 50000,
+    "cacheReadTokens": 10000,
+    "totalTokens": 200000,
+    "totalCost": 0.85
+  }
+}
+```
+
+```json With --instances
+{
+  "projects": {
+    "myproject": [
+      {
+        "date": "2024-03-01",
+        "inputTokens": 125000,
+        "outputTokens": 15000,
+        "cacheCreationTokens": 50000,
+        "cacheReadTokens": 10000,
+        "totalTokens": 200000,
+        "totalCost": 0.85,
+        "modelsUsed": ["claude-sonnet-4-20250514"],
+        "modelBreakdowns": [...],
+        "project": "myproject"
+      }
+    ]
+  },
+  "totals": { ... }
+}
+```
+</CodeGroup>
+
+## Examples
+
+### View March 2024 usage
+
+```bash
+ccusage daily --since 20240301 --until 20240331
+```
+
+### Export usage to JSON file
+
+```bash
+ccusage daily --json > daily-usage.json
+```
+
+### Show usage by project with breakdown
+
+```bash
+ccusage daily --instances --breakdown
+```
+
+### Filter high-cost days using jq
+
+```bash
+ccusage daily --jq '.daily[] | select(.totalCost > 1.0)'
+```
+
+### Show recent 7 days in reverse order
+
+```bash
+ccusage daily --order desc | head -n 10
+```
+
+## Related Commands
+
+- [monthly](/api/commands/monthly) - View usage grouped by month
+- [weekly](/api/commands/weekly) - View usage grouped by week
+- [session](/api/commands/session) - View usage by session
+- [blocks](/api/commands/blocks) - View usage by 5-hour billing blocks

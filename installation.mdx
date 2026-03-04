@@ -1,0 +1,124 @@
+---
+title: Installation
+description: Install ccusage with your preferred package manager or run it directly without installation
+---
+
+## Quick start (recommended)
+
+Thanks to ccusage's incredibly small bundle size, you can run it directly without installation:
+
+<CodeGroup>
+```bash npm
+# Recommended - always include @latest to ensure you get the newest version
+npx ccusage@latest
+```
+
+```bash bun
+bunx ccusage
+```
+
+```bash pnpm
+pnpm dlx ccusage
+```
+
+```bash pnpx
+pnpx ccusage
+```
+
+```bash deno
+# Using deno (with security flags)
+deno run -E -R=$HOME/.claude/projects/ -S=homedir -N='raw.githubusercontent.com:443' npm:ccusage@latest
+```
+</CodeGroup>
+
+<Note>
+  We strongly recommend using `@latest` suffix with npx (e.g., `npx ccusage@latest`) to ensure you're running the most recent version with the latest features and bug fixes.
+</Note>
+
+## Global installation
+
+If you prefer to install ccusage globally:
+
+<CodeGroup>
+```bash npm
+npm install -g ccusage
+```
+
+```bash bun
+bun install -g ccusage
+```
+
+```bash pnpm
+pnpm add -g ccusage
+```
+
+```bash yarn
+yarn global add ccusage
+```
+</CodeGroup>
+
+Once installed globally, you can run `ccusage` directly:
+
+```bash
+ccusage daily
+ccusage monthly
+ccusage session
+```
+
+## Requirements
+
+<Steps>
+  <Step title="Node.js version">
+    ccusage requires Node.js version 20.19.4 or higher.
+  </Step>
+  
+  <Step title="Claude Code data">
+    ccusage reads data from your local Claude Code installation. It automatically searches for data in:
+    - `~/.config/claude/projects/` (new default)
+    - `~/.claude/projects/` (old default)
+  </Step>
+  
+  <Step title="Custom data directory">
+    If your Claude data is in a custom location, set the `CLAUDE_CONFIG_DIR` environment variable:
+    
+    ```bash
+    # Single path
+    export CLAUDE_CONFIG_DIR="/path/to/claude"
+    
+    # Multiple paths
+    export CLAUDE_CONFIG_DIR="/path/to/claude1,/path/to/claude2"
+    ```
+  </Step>
+</Steps>
+
+## Verify installation
+
+Verify ccusage is working correctly:
+
+```bash
+ccusage --help
+```
+
+You should see the help output with available commands and options.
+
+<Tip>
+  If you're running ccusage for the first time and see "No Claude usage data found", make sure you have Claude Code installed and have run at least one session.
+</Tip>
+
+## Related tools
+
+Install companion tools for other AI coding assistants:
+
+```bash
+npx @ccusage/codex@latest       # OpenAI Codex usage tracking
+npx @ccusage/opencode@latest    # OpenCode usage tracking
+npx @ccusage/pi@latest          # Pi-agent usage tracking
+npx @ccusage/amp@latest         # Amp usage tracking
+npx @ccusage/mcp@latest         # MCP Server
+```
+
+## Next steps
+
+<Card title="Quick start" icon="rocket" href="/quickstart">
+  Learn how to run your first usage report
+</Card>

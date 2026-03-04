@@ -1,0 +1,241 @@
+---
+title: Weekly Reports
+description: Analyze usage patterns with weekly aggregated reports
+---
+
+The `weekly` command groups your Claude Code usage by week, providing a balanced view between daily granularity and monthly aggregation.
+
+## Basic Usage
+
+```bash
+ccusage weekly
+```
+
+This displays a table showing your usage for each week, including:
+
+- Input and output tokens
+- Cache creation and read tokens
+- Total tokens consumed
+- Total cost in USD
+- Models used
+
+## Command Options
+
+### Customize Week Start Day
+
+By default, weeks start on Sunday. You can change this with `--start-of-week`:
+
+```bash
+ccusage weekly --start-of-week monday
+```
+
+Available options:
+- `sunday` (default)
+- `monday`
+- `tuesday`
+- `wednesday`
+- `thursday`
+- `friday`
+- `saturday`
+
+### Filter by Date Range
+
+Use `--since` and `--until` to filter results:
+
+```bash
+ccusage weekly --since 20250301 --until 20250331
+```
+
+<Note>
+Dates must be in `YYYYMMDD` format. The command groups usage into weeks based on the configured start day.
+</Note>
+
+### Model Breakdown
+
+See per-model costs within each week:
+
+```bash
+ccusage weekly --breakdown
+```
+
+### JSON Output
+
+Export data in JSON format:
+
+```bash
+ccusage weekly --json
+```
+
+<CodeGroup>
+```json Standard Output
+{
+  "weekly": [
+    {
+      "week": "2025-W10",
+      "inputTokens": 285000,
+      "outputTokens": 75000,
+      "cacheCreationTokens": 22000,
+      "cacheReadTokens": 580000,
+      "totalTokens": 962000,
+      "totalCost": 2.85,
+      "modelsUsed": ["claude-sonnet-4-20250514"],
+      "modelBreakdowns": [...]
+    }
+  ],
+  "totals": {
+    "inputTokens": 285000,
+    "outputTokens": 75000,
+    "cacheCreationTokens": 22000,
+    "cacheReadTokens": 580000,
+    "totalTokens": 962000,
+    "totalCost": 2.85
+  }
+}
+```
+
+```bash jq Filter
+ccusage weekly --jq '.weekly[] | select(.totalCost > 2.0)'
+```
+</CodeGroup>
+
+### jq Integration
+
+Process JSON output with jq:
+
+```bash
+ccusage weekly --jq '.weekly | map({week, cost: .totalCost})'
+```
+
+<Tip>
+Weekly reports are ideal for sprint-based workflows. Set `--start-of-week` to match your team's sprint start day.
+</Tip>
+
+## Common Flags
+
+<ResponseField name="--start-of-week, -w" type="enum">
+  Day to start the week on (default: sunday). Options: sunday, monday, tuesday, wednesday, thursday, friday, saturday
+</ResponseField>
+
+<ResponseField name="--since, -s" type="string">
+  Filter from date (YYYYMMDD format)
+</ResponseField>
+
+<ResponseField name="--until, -u" type="string">
+  Filter until date (YYYYMMDD format)
+</ResponseField>
+
+<ResponseField name="--breakdown, -b" type="boolean">
+  Show per-model cost breakdown (default: false)
+</ResponseField>
+
+<ResponseField name="--json, -j" type="boolean">
+  Output in JSON format (default: false)
+</ResponseField>
+
+<ResponseField name="--jq, -q" type="string">
+  Process JSON output with jq command (requires jq binary, implies --json)
+</ResponseField>
+
+<ResponseField name="--mode, -m" type="enum">
+  Cost calculation mode: `auto` (use pre-calculated if available), `calculate` (always calculate from tokens), `display` (always use pre-calculated)
+</ResponseField>
+
+<ResponseField name="--timezone, -z" type="string">
+  Timezone for date grouping (e.g., UTC, America/New_York, Asia/Tokyo). Default: system timezone
+</ResponseField>
+
+<ResponseField name="--locale, -l" type="string">
+  Locale for date/time formatting (e.g., en-US, ja-JP, de-DE). Default: en-US
+</ResponseField>
+
+<ResponseField name="--compact" type="boolean">
+  Force compact mode for narrow displays
+</ResponseField>
+
+<ResponseField name="--offline, -O" type="boolean">
+  Use cached pricing data instead of fetching from API (default: false)
+</ResponseField>
+
+<ResponseField name="--debug, -d" type="boolean">
+  Show pricing mismatch information for debugging (default: false)
+</ResponseField>
+
+## Examples
+
+### Last 4 Weeks
+
+```bash
+ccusage weekly --since 20250215 --until 20250314
+```
+
+### Monday-Starting Weeks
+
+```bash
+ccusage weekly --start-of-week monday
+```
+
+### Weekly Sprint Report
+
+```bash
+ccusage weekly --start-of-week monday --breakdown
+```
+
+### Weeks Above Budget
+
+```bash
+ccusage weekly --jq '.weekly[] | select(.totalCost > 5.0)'
+```
+
+## Understanding Week Format
+
+Weeks are displayed in ISO week format: `YYYY-Wxx` (e.g., `2025-W10` for the 10th week of 2025).
+
+The week number depends on your `--start-of-week` setting:
+
+```bash
+# Default (Sunday start)
+ccusage weekly
+
+# ISO standard (Monday start)
+ccusage weekly --start-of-week monday
+```
+
+## Use Cases
+
+### Sprint-Based Development
+
+Track usage during each development sprint:
+
+```bash
+ccusage weekly --start-of-week monday --since 20250303 --until 20250316
+```
+
+### Weekly Budget Monitoring
+
+Check if weekly costs exceed your budget:
+
+```bash
+ccusage weekly --jq '.weekly[] | {week, cost: .totalCost, overBudget: (.totalCost > 10)}'
+```
+
+### Model Usage Trends
+
+See which models you're using each week:
+
+```bash
+ccusage weekly --breakdown
+```
+
+<Warning>
+Week boundaries depend on your timezone setting. Usage near midnight may be grouped differently based on `--timezone`.
+</Warning>
+
+## Compact Mode
+
+Weekly reports support compact mode for narrow terminals:
+
+```bash
+ccusage weekly --compact
+```
+
+Expand your terminal width to see cache metrics and total tokens.

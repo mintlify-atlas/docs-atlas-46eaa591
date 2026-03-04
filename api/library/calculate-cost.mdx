@@ -1,0 +1,425 @@
+---
+title: Calculate Cost
+description: Utilities for calculating costs and aggregating token usage
+---
+
+## Overview
+
+The calculate-cost module provides functions for calculating costs and aggregating token usage across different time periods and models. It handles both pre-calculated costs and dynamic cost calculations based on model pricing.
+
+## Functions
+
+### calculateTotals()
+
+Calculates total token usage and cost across multiple usage data entries.
+
+```typescript
+export function calculateTotals(
+  data: Array<DailyUsage | MonthlyUsage | WeeklyUsage | SessionUsage>
+): TokenTotals
+```
+
+<ParamField body="data" type="Array<DailyUsage | MonthlyUsage | WeeklyUsage | SessionUsage>" required>
+  Array of usage data from any aggregation period
+</ParamField>
+
+<ResponseField name="returns" type="TokenTotals">
+  Aggregated token counts and total cost
+</ResponseField>
+
+**TokenTotals Type:**
+<ResponseField name="inputTokens" type="number">
+  Total input tokens
+</ResponseField>
+<ResponseField name="outputTokens" type="number">
+  Total output tokens
+</ResponseField>
+<ResponseField name="cacheCreationTokens" type="number">
+  Total cache creation tokens
+</ResponseField>
+<ResponseField name="cacheReadTokens" type="number">
+  Total cache read tokens
+</ResponseField>
+<ResponseField name="totalCost" type="number">
+  Total cost in USD
+</ResponseField>
+
+<CodeGroup>
+```typescript Daily Usage Example
+import { loadDailyUsageData } from 'ccusage/data-loader';
+import { calculateTotals } from 'ccusage/calculate-cost';
+
+const dailyData = await loadDailyUsageData({
+  since: '20240101',
+  until: '20240131'
+});
+
+const totals = calculateTotals(dailyData);
+
+console.log('January 2024 Totals:');
+console.log(`  Input Tokens: ${totals.inputTokens.toLocaleString()}`);
+console.log(`  Output Tokens: ${totals.outputTokens.toLocaleString()}`);
+console.log(`  Cache Creation: ${totals.cacheCreationTokens.toLocaleString()}`);
+console.log(`  Cache Read: ${totals.cacheReadTokens.toLocaleString()}`);
+console.log(`  Total Cost: $${totals.totalCost.toFixed(2)}`);
+```
+
+```typescript Session Usage Example
+import { loadSessionData } from 'ccusage/data-loader';
+import { calculateTotals } from 'ccusage/calculate-cost';
+
+const sessions = await loadSessionData({
+  project: 'my-app'
+});
+
+const totals = calculateTotals(sessions);
+
+console.log('Project "my-app" Totals:');
+console.log(`  Sessions: ${sessions.length}`);
+console.log(`  Total Cost: $${totals.totalCost.toFixed(2)}`);
+```
+
+```typescript Monthly Usage Example
+import { loadMonthlyUsageData } from 'ccusage/data-loader';
+import { calculateTotals } from 'ccusage/calculate-cost';
+
+const monthlyData = await loadMonthlyUsageData({
+  order: 'desc'
+});
+
+const totals = calculateTotals(monthlyData);
+
+console.log('All-Time Totals:');
+console.log(`  Months: ${monthlyData.length}`);
+console.log(`  Total Cost: $${totals.totalCost.toFixed(2)}`);
+```
+</CodeGroup>
+
+---
+
+### getTotalTokens()
+
+Calculates the sum of all token types (input, output, cache creation, cache read).
+
+```typescript
+export function getTotalTokens(
+  tokens: AggregatedTokenCounts
+): number
+```
+
+<ParamField body="tokens" type="AggregatedTokenCounts" required>
+  Token counts object
+</ParamField>
+
+<ResponseField name="returns" type="number">
+  Sum of all token types
+</ResponseField>
+
+**AggregatedTokenCounts Type:**
+<ResponseField name="inputTokens" type="number">
+  Input token count
+</ResponseField>
+<ResponseField name="outputTokens" type="number">
+  Output token count
+</ResponseField>
+<ResponseField name="cacheCreationTokens" type="number">
+  Cache creation token count
+</ResponseField>
+<ResponseField name="cacheReadTokens" type="number">
+  Cache read token count
+</ResponseField>
+
+<CodeGroup>
+```typescript Example
+import { getTotalTokens } from 'ccusage/calculate-cost';
+
+const tokens = {
+  inputTokens: 1000,
+  outputTokens: 500,
+  cacheCreationTokens: 200,
+  cacheReadTokens: 100
+};
+
+const total = getTotalTokens(tokens);
+console.log(`Total tokens: ${total}`); // 1800
+```
+
+```typescript With Daily Usage
+import { loadDailyUsageData } from 'ccusage/data-loader';
+import { getTotalTokens } from 'ccusage/calculate-cost';
+
+const dailyData = await loadDailyUsageData();
+
+for (const day of dailyData) {
+  const totalTokens = getTotalTokens(day);
+  console.log(`${day.date}: ${totalTokens.toLocaleString()} tokens`);
+}
+```
+</CodeGroup>
+
+---
+
+### createTotalsObject()
+
+Creates a complete totals object by adding total token count to existing totals.
+
+```typescript
+export function createTotalsObject(
+  totals: TokenTotals
+): TotalsObject
+```
+
+<ParamField body="totals" type="TokenTotals" required>
+  Token totals with cost information
+</ParamField>
+
+<ResponseField name="returns" type="TotalsObject">
+  Complete totals object including total token sum
+</ResponseField>
+
+**TotalsObject Type:**
+<ResponseField name="inputTokens" type="number">
+  Total input tokens
+</ResponseField>
+<ResponseField name="outputTokens" type="number">
+  Total output tokens
+</ResponseField>
+<ResponseField name="cacheCreationTokens" type="number">
+  Total cache creation tokens
+</ResponseField>
+<ResponseField name="cacheReadTokens" type="number">
+  Total cache read tokens
+</ResponseField>
+<ResponseField name="totalCost" type="number">
+  Total cost in USD
+</ResponseField>
+<ResponseField name="totalTokens" type="number">
+  Sum of all token types
+</ResponseField>
+
+<CodeGroup>
+```typescript Example
+import { loadDailyUsageData } from 'ccusage/data-loader';
+import { calculateTotals, createTotalsObject } from 'ccusage/calculate-cost';
+
+const dailyData = await loadDailyUsageData();
+const totals = calculateTotals(dailyData);
+const totalsObject = createTotalsObject(totals);
+
+console.log('Complete Totals:');
+console.log(`  Input: ${totalsObject.inputTokens.toLocaleString()}`);
+console.log(`  Output: ${totalsObject.outputTokens.toLocaleString()}`);
+console.log(`  Cache Creation: ${totalsObject.cacheCreationTokens.toLocaleString()}`);
+console.log(`  Cache Read: ${totalsObject.cacheReadTokens.toLocaleString()}`);
+console.log(`  Total Tokens: ${totalsObject.totalTokens.toLocaleString()}`);
+console.log(`  Cost: $${totalsObject.totalCost.toFixed(4)}`);
+```
+
+```typescript Efficiency Calculation
+import { loadDailyUsageData } from 'ccusage/data-loader';
+import { calculateTotals, createTotalsObject } from 'ccusage/calculate-cost';
+
+const dailyData = await loadDailyUsageData();
+const totalsObj = createTotalsObject(calculateTotals(dailyData));
+
+const costPerToken = totalsObj.totalCost / totalsObj.totalTokens;
+const cacheRatio = totalsObj.cacheReadTokens / totalsObj.totalTokens;
+
+console.log(`Cost per token: $${costPerToken.toFixed(6)}`);
+console.log(`Cache read ratio: ${(cacheRatio * 100).toFixed(2)}%`);
+```
+</CodeGroup>
+
+---
+
+## Usage Patterns
+
+### Analyzing Token Distribution
+
+<CodeGroup>
+```typescript Token Distribution
+import { loadDailyUsageData } from 'ccusage/data-loader';
+import { calculateTotals, getTotalTokens } from 'ccusage/calculate-cost';
+
+const dailyData = await loadDailyUsageData();
+const totals = calculateTotals(dailyData);
+const totalTokens = getTotalTokens(totals);
+
+// Calculate percentages
+const distribution = {
+  input: (totals.inputTokens / totalTokens) * 100,
+  output: (totals.outputTokens / totalTokens) * 100,
+  cacheCreation: (totals.cacheCreationTokens / totalTokens) * 100,
+  cacheRead: (totals.cacheReadTokens / totalTokens) * 100
+};
+
+console.log('Token Distribution:');
+console.log(`  Input: ${distribution.input.toFixed(2)}%`);
+console.log(`  Output: ${distribution.output.toFixed(2)}%`);
+console.log(`  Cache Creation: ${distribution.cacheCreation.toFixed(2)}%`);
+console.log(`  Cache Read: ${distribution.cacheRead.toFixed(2)}%`);
+```
+</CodeGroup>
+
+### Comparing Time Periods
+
+<CodeGroup>
+```typescript Month-over-Month Comparison
+import { loadMonthlyUsageData } from 'ccusage/data-loader';
+import { calculateTotals } from 'ccusage/calculate-cost';
+
+const monthlyData = await loadMonthlyUsageData({
+  order: 'desc'
+});
+
+if (monthlyData.length >= 2) {
+  const [currentMonth, previousMonth] = monthlyData;
+  
+  const currentTotals = calculateTotals([currentMonth]);
+  const previousTotals = calculateTotals([previousMonth]);
+  
+  const costChange = currentTotals.totalCost - previousTotals.totalCost;
+  const percentChange = (costChange / previousTotals.totalCost) * 100;
+  
+  console.log(`${currentMonth.month} vs ${previousMonth.month}:`);
+  console.log(`  Current: $${currentTotals.totalCost.toFixed(2)}`);
+  console.log(`  Previous: $${previousTotals.totalCost.toFixed(2)}`);
+  console.log(`  Change: ${percentChange > 0 ? '+' : ''}${percentChange.toFixed(2)}%`);
+}
+```
+</CodeGroup>
+
+### Project Cost Tracking
+
+<CodeGroup>
+```typescript Per-Project Analysis
+import { loadDailyUsageData } from 'ccusage/data-loader';
+import { calculateTotals } from 'ccusage/calculate-cost';
+
+const projects = ['project-a', 'project-b', 'project-c'];
+
+for (const project of projects) {
+  const data = await loadDailyUsageData({
+    project,
+    groupByProject: true
+  });
+  
+  const totals = calculateTotals(data);
+  
+  console.log(`Project: ${project}`);
+  console.log(`  Total Cost: $${totals.totalCost.toFixed(2)}`);
+  console.log(`  Days Active: ${data.length}`);
+  console.log(`  Avg Cost/Day: $${(totals.totalCost / data.length).toFixed(2)}`);
+  console.log('');
+}
+```
+</CodeGroup>
+
+### Cost Breakdown by Model
+
+<CodeGroup>
+```typescript Model Cost Analysis
+import { loadDailyUsageData } from 'ccusage/data-loader';
+import { calculateTotals } from 'ccusage/calculate-cost';
+
+const dailyData = await loadDailyUsageData();
+const totals = calculateTotals(dailyData);
+
+// Aggregate model breakdowns
+const modelCosts = new Map<string, number>();
+
+for (const day of dailyData) {
+  for (const breakdown of day.modelBreakdowns) {
+    const current = modelCosts.get(breakdown.modelName) || 0;
+    modelCosts.set(breakdown.modelName, current + breakdown.cost);
+  }
+}
+
+console.log('Cost by Model:');
+for (const [model, cost] of Array.from(modelCosts).sort((a, b) => b[1] - a[1])) {
+  const percentage = (cost / totals.totalCost) * 100;
+  console.log(`  ${model}: $${cost.toFixed(4)} (${percentage.toFixed(2)}%)`);
+}
+```
+</CodeGroup>
+
+---
+
+## Types
+
+### TokenTotals
+
+Token totals including cost information.
+
+```typescript
+type TokenTotals = {
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+  totalCost: number;
+};
+```
+
+### TotalsObject
+
+Complete totals object with token counts, cost, and total token sum.
+
+```typescript
+type TotalsObject = TokenTotals & {
+  totalTokens: number;
+};
+```
+
+### AggregatedTokenCounts
+
+Token counts object for aggregation.
+
+```typescript
+type AggregatedTokenCounts = {
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+};
+```
+
+---
+
+## Integration with Data Loader
+
+The calculate-cost module works seamlessly with all data loader functions:
+
+<CodeGroup>
+```typescript Daily Usage
+import { loadDailyUsageData } from 'ccusage/data-loader';
+import { calculateTotals } from 'ccusage/calculate-cost';
+
+const daily = await loadDailyUsageData();
+const totals = calculateTotals(daily);
+```
+
+```typescript Monthly Usage
+import { loadMonthlyUsageData } from 'ccusage/data-loader';
+import { calculateTotals } from 'ccusage/calculate-cost';
+
+const monthly = await loadMonthlyUsageData();
+const totals = calculateTotals(monthly);
+```
+
+```typescript Session Usage
+import { loadSessionData } from 'ccusage/data-loader';
+import { calculateTotals } from 'ccusage/calculate-cost';
+
+const sessions = await loadSessionData();
+const totals = calculateTotals(sessions);
+```
+
+```typescript Weekly Usage
+import { loadWeeklyUsageData } from 'ccusage/data-loader';
+import { calculateTotals } from 'ccusage/calculate-cost';
+
+const weekly = await loadWeeklyUsageData();
+const totals = calculateTotals(weekly);
+```
+</CodeGroup>

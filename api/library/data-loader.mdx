@@ -1,0 +1,719 @@
+---
+title: Data Loader
+description: Functions for loading and parsing Claude Code usage data from JSONL files
+---
+
+## Overview
+
+The data loader module provides functions for loading and parsing Claude Code usage data from JSONL files stored in Claude data directories. It handles data aggregation for daily, monthly, weekly, session-based, and session block reporting.
+
+## Core Functions
+
+### getClaudePaths()
+
+Get Claude data directories to search for usage data.
+
+<ParamField body="returns" type="string[]" required>
+  Array of valid Claude data directory paths
+</ParamField>
+
+**Behavior:**
+- When `CLAUDE_CONFIG_DIR` is set: uses only those paths
+- When not set: uses default paths (`~/.config/claude` and `~/.claude`)
+- Throws error if no valid directories found
+
+<CodeGroup>
+```typescript Example
+import { getClaudePaths } from 'ccusage/data-loader';
+
+const paths = getClaudePaths();
+console.log(paths);
+// ['/home/user/.config/claude', '/home/user/.claude']
+```
+</CodeGroup>
+
+---
+
+### extractProjectFromPath()
+
+Extract project name from Claude JSONL file path.
+
+<ParamField body="jsonlPath" type="string" required>
+  Absolute path to JSONL file
+</ParamField>
+
+<ResponseField name="returns" type="string">
+  Project name extracted from path, or "unknown" if malformed
+</ResponseField>
+
+<CodeGroup>
+```typescript Example
+import { extractProjectFromPath } from 'ccusage/data-loader';
+
+const project = extractProjectFromPath(
+  '/home/user/.claude/projects/my-app/session-123.jsonl'
+);
+console.log(project); // "my-app"
+```
+</CodeGroup>
+
+---
+
+### loadDailyUsageData()
+
+Loads and aggregates Claude usage data by day.
+
+```typescript
+export async function loadDailyUsageData(
+  options?: LoadOptions
+): Promise<DailyUsage[]>
+```
+
+<ParamField body="options" type="LoadOptions" optional>
+  Configuration for loading and filtering data
+</ParamField>
+
+<ResponseField name="returns" type="Promise<DailyUsage[]>">
+  Array of daily usage summaries sorted by date
+</ResponseField>
+
+**LoadOptions:**
+<ParamField body="claudePath" type="string" optional>
+  Custom path to Claude data directory
+</ParamField>
+<ParamField body="mode" type="'auto' | 'calculate' | 'display'" optional>
+  Cost calculation mode (default: 'auto')
+</ParamField>
+<ParamField body="order" type="'asc' | 'desc'" optional>
+  Sort order for dates (default: 'desc')
+</ParamField>
+<ParamField body="offline" type="boolean" optional>
+  Use offline mode for pricing (default: false)
+</ParamField>
+<ParamField body="groupByProject" type="boolean" optional>
+  Group data by project instead of aggregating (default: false)
+</ParamField>
+<ParamField body="project" type="string" optional>
+  Filter to specific project name
+</ParamField>
+<ParamField body="since" type="string" optional>
+  Start date filter (YYYYMMDD format)
+</ParamField>
+<ParamField body="until" type="string" optional>
+  End date filter (YYYYMMDD format)
+</ParamField>
+<ParamField body="timezone" type="string" optional>
+  Timezone for date grouping (e.g., 'UTC', 'America/New_York')
+</ParamField>
+<ParamField body="locale" type="string" optional>
+  Locale for date/time formatting (e.g., 'en-US', 'ja-JP')
+</ParamField>
+
+**DailyUsage Type:**
+<ResponseField name="date" type="string">
+  Date in YYYY-MM-DD format
+</ResponseField>
+<ResponseField name="inputTokens" type="number">
+  Total input tokens for the day
+</ResponseField>
+<ResponseField name="outputTokens" type="number">
+  Total output tokens for the day
+</ResponseField>
+<ResponseField name="cacheCreationTokens" type="number">
+  Total cache creation tokens
+</ResponseField>
+<ResponseField name="cacheReadTokens" type="number">
+  Total cache read tokens
+</ResponseField>
+<ResponseField name="totalCost" type="number">
+  Total cost in USD
+</ResponseField>
+<ResponseField name="modelsUsed" type="string[]">
+  Array of unique model names used
+</ResponseField>
+<ResponseField name="modelBreakdowns" type="ModelBreakdown[]">
+  Per-model usage breakdowns
+</ResponseField>
+<ResponseField name="project" type="string" optional>
+  Project name (when groupByProject is enabled)
+</ResponseField>
+
+<CodeGroup>
+```typescript Example
+import { loadDailyUsageData } from 'ccusage/data-loader';
+
+const dailyData = await loadDailyUsageData({
+  since: '20240101',
+  until: '20240131',
+  mode: 'auto',
+  order: 'desc'
+});
+
+for (const day of dailyData) {
+  console.log(`${day.date}: $${day.totalCost.toFixed(4)}`);
+}
+```
+
+```typescript With Project Filtering
+import { loadDailyUsageData } from 'ccusage/data-loader';
+
+const projectData = await loadDailyUsageData({
+  project: 'my-app',
+  groupByProject: true
+});
+
+for (const day of projectData) {
+  console.log(`${day.date} [${day.project}]: $${day.totalCost}`);
+}
+```
+</CodeGroup>
+
+---
+
+### loadMonthlyUsageData()
+
+Loads and aggregates Claude usage data by month.
+
+```typescript
+export async function loadMonthlyUsageData(
+  options?: LoadOptions
+): Promise<MonthlyUsage[]>
+```
+
+<ParamField body="options" type="LoadOptions" optional>
+  Configuration for loading and filtering data
+</ParamField>
+
+<ResponseField name="returns" type="Promise<MonthlyUsage[]>">
+  Array of monthly usage summaries sorted by month
+</ResponseField>
+
+**MonthlyUsage Type:**
+<ResponseField name="month" type="string">
+  Month in YYYY-MM format
+</ResponseField>
+<ResponseField name="inputTokens" type="number">
+  Total input tokens for the month
+</ResponseField>
+<ResponseField name="outputTokens" type="number">
+  Total output tokens for the month
+</ResponseField>
+<ResponseField name="cacheCreationTokens" type="number">
+  Total cache creation tokens
+</ResponseField>
+<ResponseField name="cacheReadTokens" type="number">
+  Total cache read tokens
+</ResponseField>
+<ResponseField name="totalCost" type="number">
+  Total cost in USD
+</ResponseField>
+<ResponseField name="modelsUsed" type="string[]">
+  Array of unique model names used
+</ResponseField>
+<ResponseField name="modelBreakdowns" type="ModelBreakdown[]">
+  Per-model usage breakdowns
+</ResponseField>
+<ResponseField name="project" type="string" optional>
+  Project name (when groupByProject is enabled)
+</ResponseField>
+
+<CodeGroup>
+```typescript Example
+import { loadMonthlyUsageData } from 'ccusage/data-loader';
+
+const monthlyData = await loadMonthlyUsageData({
+  mode: 'calculate',
+  order: 'desc'
+});
+
+for (const month of monthlyData) {
+  console.log(`${month.month}: $${month.totalCost.toFixed(2)}`);
+}
+```
+</CodeGroup>
+
+---
+
+### loadWeeklyUsageData()
+
+Loads and aggregates Claude usage data by week.
+
+```typescript
+export async function loadWeeklyUsageData(
+  options?: LoadOptions
+): Promise<WeeklyUsage[]>
+```
+
+<ParamField body="options" type="LoadOptions" optional>
+  Configuration including week start day
+</ParamField>
+
+<ResponseField name="returns" type="Promise<WeeklyUsage[]>">
+  Array of weekly usage summaries sorted by week
+</ResponseField>
+
+**Additional Option:**
+<ParamField body="startOfWeek" type="WeekDay" optional>
+  Start of week for weekly aggregation (e.g., 'sunday', 'monday')
+</ParamField>
+
+**WeeklyUsage Type:**
+<ResponseField name="week" type="string">
+  Week start date in YYYY-MM-DD format
+</ResponseField>
+<ResponseField name="inputTokens" type="number">
+  Total input tokens for the week
+</ResponseField>
+<ResponseField name="outputTokens" type="number">
+  Total output tokens for the week
+</ResponseField>
+<ResponseField name="cacheCreationTokens" type="number">
+  Total cache creation tokens
+</ResponseField>
+<ResponseField name="cacheReadTokens" type="number">
+  Total cache read tokens
+</ResponseField>
+<ResponseField name="totalCost" type="number">
+  Total cost in USD
+</ResponseField>
+<ResponseField name="modelsUsed" type="string[]">
+  Array of unique model names used
+</ResponseField>
+<ResponseField name="modelBreakdowns" type="ModelBreakdown[]">
+  Per-model usage breakdowns
+</ResponseField>
+
+<CodeGroup>
+```typescript Example
+import { loadWeeklyUsageData } from 'ccusage/data-loader';
+
+const weeklyData = await loadWeeklyUsageData({
+  startOfWeek: 'monday',
+  order: 'desc'
+});
+
+for (const week of weeklyData) {
+  console.log(`Week of ${week.week}: $${week.totalCost.toFixed(2)}`);
+}
+```
+</CodeGroup>
+
+---
+
+### loadSessionData()
+
+Loads and aggregates Claude usage data by session.
+
+```typescript
+export async function loadSessionData(
+  options?: LoadOptions
+): Promise<SessionUsage[]>
+```
+
+<ParamField body="options" type="LoadOptions" optional>
+  Configuration for loading and filtering data
+</ParamField>
+
+<ResponseField name="returns" type="Promise<SessionUsage[]>">
+  Array of session usage summaries sorted by last activity
+</ResponseField>
+
+**SessionUsage Type:**
+<ResponseField name="sessionId" type="string">
+  Unique session identifier
+</ResponseField>
+<ResponseField name="projectPath" type="string">
+  Project path for the session
+</ResponseField>
+<ResponseField name="inputTokens" type="number">
+  Total input tokens for the session
+</ResponseField>
+<ResponseField name="outputTokens" type="number">
+  Total output tokens for the session
+</ResponseField>
+<ResponseField name="cacheCreationTokens" type="number">
+  Total cache creation tokens
+</ResponseField>
+<ResponseField name="cacheReadTokens" type="number">
+  Total cache read tokens
+</ResponseField>
+<ResponseField name="totalCost" type="number">
+  Total cost in USD
+</ResponseField>
+<ResponseField name="lastActivity" type="string">
+  Date of last activity (YYYY-MM-DD)
+</ResponseField>
+<ResponseField name="versions" type="string[]">
+  Claude Code versions used in session
+</ResponseField>
+<ResponseField name="modelsUsed" type="string[]">
+  Array of unique model names used
+</ResponseField>
+<ResponseField name="modelBreakdowns" type="ModelBreakdown[]">
+  Per-model usage breakdowns
+</ResponseField>
+
+<CodeGroup>
+```typescript Example
+import { loadSessionData } from 'ccusage/data-loader';
+
+const sessions = await loadSessionData({
+  order: 'desc'
+});
+
+for (const session of sessions) {
+  console.log(`${session.projectPath} (${session.sessionId})`);
+  console.log(`  Cost: $${session.totalCost.toFixed(4)}`);
+  console.log(`  Last Activity: ${session.lastActivity}`);
+}
+```
+</CodeGroup>
+
+---
+
+### loadSessionUsageById()
+
+Load usage data for a specific session by sessionId.
+
+```typescript
+export async function loadSessionUsageById(
+  sessionId: string,
+  options?: { mode?: CostMode; offline?: boolean }
+): Promise<{ totalCost: number; entries: UsageData[] } | null>
+```
+
+<ParamField body="sessionId" type="string" required>
+  The session ID to load data for (matches JSONL filename)
+</ParamField>
+<ParamField body="options.mode" type="'auto' | 'calculate' | 'display'" optional>
+  Cost calculation mode (default: 'auto')
+</ParamField>
+<ParamField body="options.offline" type="boolean" optional>
+  Use offline pricing data (default: false)
+</ParamField>
+
+<ResponseField name="returns" type="Promise<object | null>">
+  Usage data for the session or null if not found
+</ResponseField>
+<ResponseField name="totalCost" type="number">
+  Total cost for the session in USD
+</ResponseField>
+<ResponseField name="entries" type="UsageData[]">
+  Array of raw usage data entries
+</ResponseField>
+
+<CodeGroup>
+```typescript Example
+import { loadSessionUsageById } from 'ccusage/data-loader';
+
+const sessionData = await loadSessionUsageById('session-123', {
+  mode: 'auto'
+});
+
+if (sessionData) {
+  console.log(`Total cost: $${sessionData.totalCost.toFixed(4)}`);
+  console.log(`Number of entries: ${sessionData.entries.length}`);
+} else {
+  console.log('Session not found');
+}
+```
+</CodeGroup>
+
+---
+
+### loadSessionBlockData()
+
+Loads usage data organized into session blocks (5-hour billing periods).
+
+```typescript
+export async function loadSessionBlockData(
+  options?: LoadOptions
+): Promise<SessionBlock[]>
+```
+
+<ParamField body="options" type="LoadOptions" optional>
+  Configuration including session duration
+</ParamField>
+
+<ResponseField name="returns" type="Promise<SessionBlock[]>">
+  Array of session blocks with usage and cost information
+</ResponseField>
+
+**Additional Option:**
+<ParamField body="sessionDurationHours" type="number" optional>
+  Session block duration in hours (default: 5)
+</ParamField>
+
+**SessionBlock Type:**
+<ResponseField name="startTime" type="Date">
+  Block start time
+</ResponseField>
+<ResponseField name="endTime" type="Date">
+  Block end time
+</ResponseField>
+<ResponseField name="inputTokens" type="number">
+  Total input tokens in block
+</ResponseField>
+<ResponseField name="outputTokens" type="number">
+  Total output tokens in block
+</ResponseField>
+<ResponseField name="cacheCreationTokens" type="number">
+  Total cache creation tokens
+</ResponseField>
+<ResponseField name="cacheReadTokens" type="number">
+  Total cache read tokens
+</ResponseField>
+<ResponseField name="totalCost" type="number">
+  Total cost in USD
+</ResponseField>
+<ResponseField name="usageLimitResetTime" type="Date" optional>
+  Time when usage limit resets
+</ResponseField>
+
+<CodeGroup>
+```typescript Example
+import { loadSessionBlockData } from 'ccusage/data-loader';
+
+const blocks = await loadSessionBlockData({
+  sessionDurationHours: 5,
+  order: 'desc'
+});
+
+for (const block of blocks) {
+  console.log(`Block: ${block.startTime.toISOString()}`);
+  console.log(`  Cost: $${block.totalCost.toFixed(4)}`);
+  console.log(`  Tokens: ${block.inputTokens + block.outputTokens}`);
+}
+```
+</CodeGroup>
+
+---
+
+### calculateContextTokens()
+
+Calculate context tokens from transcript file.
+
+```typescript
+export async function calculateContextTokens(
+  transcriptPath: string,
+  modelId?: string,
+  offline?: boolean
+): Promise<{
+  inputTokens: number;
+  percentage: number;
+  contextLimit: number;
+} | null>
+```
+
+<ParamField body="transcriptPath" type="string" required>
+  Path to the transcript JSONL file
+</ParamField>
+<ParamField body="modelId" type="string" optional>
+  Model identifier for context limit lookup
+</ParamField>
+<ParamField body="offline" type="boolean" optional>
+  Use offline mode (default: false)
+</ParamField>
+
+<ResponseField name="returns" type="Promise<object | null>">
+  Context token information or null if unavailable
+</ResponseField>
+<ResponseField name="inputTokens" type="number">
+  Total input tokens used
+</ResponseField>
+<ResponseField name="percentage" type="number">
+  Percentage of context limit used (0-100)
+</ResponseField>
+<ResponseField name="contextLimit" type="number">
+  Model's context limit
+</ResponseField>
+
+<CodeGroup>
+```typescript Example
+import { calculateContextTokens } from 'ccusage/data-loader';
+
+const context = await calculateContextTokens(
+  '/path/to/transcript.jsonl',
+  'claude-sonnet-4-20250514'
+);
+
+if (context) {
+  console.log(`Context: ${context.percentage}% (${context.inputTokens}/${context.contextLimit})`);
+}
+```
+</CodeGroup>
+
+---
+
+## Utility Functions
+
+### createUniqueHash()
+
+Create a unique identifier for deduplication using message ID and request ID.
+
+```typescript
+export function createUniqueHash(data: UsageData): string | null
+```
+
+<ParamField body="data" type="UsageData" required>
+  Usage data entry
+</ParamField>
+
+<ResponseField name="returns" type="string | null">
+  Hash string or null if IDs are missing
+</ResponseField>
+
+---
+
+### getEarliestTimestamp()
+
+Extract the earliest timestamp from a JSONL file.
+
+```typescript
+export async function getEarliestTimestamp(
+  filePath: string
+): Promise<Date | null>
+```
+
+<ParamField body="filePath" type="string" required>
+  Path to JSONL file
+</ParamField>
+
+<ResponseField name="returns" type="Promise<Date | null>">
+  Earliest timestamp or null if not found
+</ResponseField>
+
+---
+
+### sortFilesByTimestamp()
+
+Sort files by their earliest timestamp.
+
+```typescript
+export async function sortFilesByTimestamp(
+  files: string[]
+): Promise<string[]>
+```
+
+<ParamField body="files" type="string[]" required>
+  Array of file paths
+</ParamField>
+
+<ResponseField name="returns" type="Promise<string[]>">
+  Sorted array of file paths (oldest first)
+</ResponseField>
+
+---
+
+### globUsageFiles()
+
+Glob files from multiple Claude paths in parallel.
+
+```typescript
+export async function globUsageFiles(
+  claudePaths: string[]
+): Promise<GlobResult[]>
+```
+
+<ParamField body="claudePaths" type="string[]" required>
+  Array of Claude base paths
+</ParamField>
+
+<ResponseField name="returns" type="Promise<GlobResult[]>">
+  Array of file paths with their base directories
+</ResponseField>
+
+**GlobResult Type:**
+<ResponseField name="file" type="string">
+  Absolute file path
+</ResponseField>
+<ResponseField name="baseDir" type="string">
+  Base directory path
+</ResponseField>
+
+---
+
+## Types
+
+### UsageData
+
+Type definition for Claude usage data entries from JSONL files.
+
+```typescript
+type UsageData = {
+  timestamp: string;
+  sessionId?: string;
+  version?: string;
+  message: {
+    usage: {
+      input_tokens: number;
+      output_tokens: number;
+      cache_creation_input_tokens?: number;
+      cache_read_input_tokens?: number;
+    };
+    model?: string;
+    id?: string;
+    content?: Array<{ text?: string }>;
+  };
+  costUSD?: number;
+  requestId?: string;
+  isApiErrorMessage?: boolean;
+};
+```
+
+### ModelBreakdown
+
+Type definition for model-specific usage breakdown.
+
+```typescript
+type ModelBreakdown = {
+  modelName: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+  cost: number;
+};
+```
+
+---
+
+## Cost Calculation Modes
+
+### `auto` (Default)
+Uses pre-calculated `costUSD` when available, otherwise calculates from tokens using model pricing.
+
+### `calculate`
+Always calculates costs from token counts using model pricing, ignoring `costUSD`.
+
+### `display`
+Always uses pre-calculated `costUSD` values, shows 0 for missing costs.
+
+---
+
+## Date Filtering
+
+All date filters use `YYYYMMDD` format:
+
+```typescript
+const data = await loadDailyUsageData({
+  since: '20240101',  // January 1, 2024
+  until: '20240131'   // January 31, 2024
+});
+```
+
+---
+
+## Environment Variables
+
+### `CLAUDE_CONFIG_DIR`
+
+Custom Claude data directory paths (comma-separated):
+
+```bash
+export CLAUDE_CONFIG_DIR="/path/to/claude1,/path/to/claude2"
+```
+
+When not set, uses default paths:
+- `~/.config/claude/projects/`
+- `~/.claude/projects/`

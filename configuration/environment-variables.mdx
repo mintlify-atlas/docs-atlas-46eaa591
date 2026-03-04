@@ -1,0 +1,226 @@
+---
+title: Environment Variables
+description: Environment variables for controlling ccusage behavior
+---
+
+ccusage uses environment variables to configure global behavior, data directory locations, and output formatting.
+
+## Logging
+
+<ParamField path="LOG_LEVEL" type="number" default="2">
+  Control logging verbosity for ccusage output. Higher values show more detailed logs.
+  
+  **Available levels:**
+  - `0` - Silent (no output except results)
+  - `1` - Warn (warnings only)
+  - `2` - Log (standard logging)
+  - `3` - Info (informational messages)
+  - `4` - Debug (detailed debugging)
+  - `5` - Trace (very verbose tracing)
+  
+  <CodeGroup>
+  ```bash Silent mode
+  LOG_LEVEL=0 ccusage daily
+  ```
+  
+  ```bash Debug mode
+  LOG_LEVEL=4 ccusage daily
+  ```
+  
+  ```bash Permanent setting (bash/zsh)
+  export LOG_LEVEL=3
+  ccusage daily
+  ```
+  </CodeGroup>
+  
+  <Info>Silent mode (`LOG_LEVEL=0`) is useful for scripting where you only want the output data.</Info>
+</ParamField>
+
+## Data Directory
+
+<ParamField path="CLAUDE_CONFIG_DIR" type="string">
+  Specify custom Claude data directory path(s). Supports single or multiple comma-separated paths.
+  
+  **Default behavior** (when not set):
+  - Searches `~/.config/claude/` (new default, XDG config directory)
+  - Falls back to `~/.claude/` (legacy directory)
+  - Uses first valid directory with `projects/` subdirectory
+  
+  <CodeGroup>
+  ```bash Single path
+  export CLAUDE_CONFIG_DIR="/path/to/claude"
+  ccusage daily
+  ```
+  
+  ```bash Multiple paths
+  export CLAUDE_CONFIG_DIR="/path/to/claude1,/path/to/claude2"
+  ccusage daily
+  ```
+  
+  ```bash Temporary override
+  CLAUDE_CONFIG_DIR="/custom/path" ccusage daily
+  ```
+  </CodeGroup>
+  
+  <Note>
+  Each path must contain a `projects/` subdirectory to be considered valid. Usage data from all valid directories is automatically aggregated.
+  </Note>
+  
+  **Structure requirements:**
+  ```
+  CLAUDE_CONFIG_DIR/
+  └── projects/              # Required subdirectory
+      ├── project1/
+      │   └── session1.jsonl
+      └── project2/
+          └── session2.jsonl
+  ```
+</ParamField>
+
+## Output Formatting
+
+<ParamField path="FORCE_COLOR" type="number">
+  Force colored output even when stdout is not a TTY (e.g., when piping output).
+  
+  <CodeGroup>
+  ```bash Enable colors
+  FORCE_COLOR=1 ccusage daily
+  ```
+  
+  ```bash Disable colors
+  FORCE_COLOR=0 ccusage daily
+  ```
+  </CodeGroup>
+  
+  <Info>This has the same effect as the `--color` CLI flag. Both are handled by picocolors.</Info>
+</ParamField>
+
+<ParamField path="NO_COLOR" type="number">
+  Disable colored output globally. Takes precedence over `FORCE_COLOR`.
+  
+  ```bash
+  NO_COLOR=1 ccusage daily
+  ```
+  
+  <Info>This follows the NO_COLOR standard (https://no-color.org) and has the same effect as the `--no-color` CLI flag.</Info>
+</ParamField>
+
+## Examples
+
+### Development Environment
+
+Typical development setup with debugging and custom paths:
+
+```bash .env or shell profile
+# Enable debug logging
+export LOG_LEVEL=4
+
+# Use custom Claude directory
+export CLAUDE_CONFIG_DIR="/home/dev/claude-data"
+
+# Force colors in tmux/screen
+export FORCE_COLOR=1
+```
+
+### CI/CD Environment
+
+Production environment with minimal output:
+
+```bash GitHub Actions / CI config
+# Silent logging for clean output
+export LOG_LEVEL=0
+
+# Disable colors for log files
+export NO_COLOR=1
+
+# Use specific data directory
+export CLAUDE_CONFIG_DIR="/var/lib/claude"
+```
+
+### Multiple Claude Installations
+
+Aggregating data from multiple Claude Code installations:
+
+```bash
+# Track usage across dev and production environments
+export CLAUDE_CONFIG_DIR="/home/user/.config/claude,/opt/claude-prod"
+
+ccusage daily
+```
+
+### Script Usage
+
+Using environment variables in scripts:
+
+<CodeGroup>
+```bash Usage monitoring script
+#!/bin/bash
+
+# Silent mode for clean JSON output
+export LOG_LEVEL=0
+
+# Custom data path
+export CLAUDE_CONFIG_DIR="$HOME/projects/claude-data"
+
+# Get usage data
+ccusage daily --json > daily-usage.json
+
+# Process with jq
+jq '.[] | select(.totalCost > 1.0)' daily-usage.json
+```
+
+```python Python integration
+import os
+import subprocess
+import json
+
+# Set environment variables
+os.environ['LOG_LEVEL'] = '0'
+os.environ['CLAUDE_CONFIG_DIR'] = '/path/to/claude'
+
+# Run ccusage and capture output
+result = subprocess.run(
+    ['ccusage', 'daily', '--json'],
+    capture_output=True,
+    text=True
+)
+
+# Parse JSON output
+usage_data = json.loads(result.stdout)
+print(f"Total entries: {len(usage_data)}")
+```
+</CodeGroup>
+
+## Debugging Configuration
+
+Use debug logging to verify environment variable configuration:
+
+```bash
+# Check which directories are being used
+LOG_LEVEL=4 ccusage daily --debug
+
+# Output will show:
+# - Detected Claude directories
+# - Configuration file search paths
+# - Loaded pricing data
+# - Data aggregation details
+```
+
+## Environment Variable Priority
+
+When multiple configuration methods are used:
+
+1. **CLI flags** - Highest priority
+2. **Environment variables** - Medium priority
+3. **Config files** - Lower priority
+4. **Built-in defaults** - Lowest priority
+
+<Note>
+For example, `--no-color` flag overrides `NO_COLOR` environment variable, which overrides `noColor` in config file.
+</Note>
+
+## Related
+
+- [CLI Options](/configuration/cli-options) - Command-line flags and options
+- [Config Files](/configuration/config-files) - JSON configuration files
+- [Custom Paths](/configuration/custom-paths) - Managing multiple Claude installations

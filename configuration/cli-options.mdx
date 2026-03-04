@@ -1,0 +1,291 @@
+---
+title: CLI Options
+description: Command-line flags and options for ccusage commands
+---
+
+All ccusage commands support a comprehensive set of CLI options for customizing output, filtering data, and controlling behavior.
+
+## Global Options
+
+These options are available across all commands (daily, monthly, session, blocks, statusline).
+
+### Output Format
+
+<ParamField path="--json" type="boolean" default="false">
+  Output results in JSON format instead of formatted tables.
+  
+  <CodeGroup>
+  ```bash Short flag
+  ccusage daily -j
+  ```
+  
+  ```bash Long flag
+  ccusage daily --json
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="--jq" type="string">
+  Process JSON output with jq command. Automatically implies `--json`. Requires jq binary to be installed.
+  
+  ```bash
+  ccusage daily --jq '.[] | select(.totalCost > 1.0)'
+  ```
+  
+  <Note>The jq binary must be available in your PATH for this option to work.</Note>
+</ParamField>
+
+### Display Options
+
+<ParamField path="--color" type="boolean">
+  Enable colored output. Defaults to auto-detection based on terminal capabilities.
+  
+  ```bash
+  ccusage daily --color
+  ```
+  
+  <Info>You can also set `FORCE_COLOR=1` environment variable to enable colors.</Info>
+</ParamField>
+
+<ParamField path="--no-color" type="boolean">
+  Disable colored output. Overrides auto-detection and color settings.
+  
+  ```bash
+  ccusage daily --no-color
+  ```
+  
+  <Info>You can also set `NO_COLOR=1` environment variable to disable colors.</Info>
+</ParamField>
+
+<ParamField path="--compact" type="boolean" default="false">
+  Force compact mode for narrow displays. Better for screenshots and constrained terminal widths.
+  
+  ```bash
+  ccusage daily --compact
+  ```
+</ParamField>
+
+### Date Filtering
+
+<ParamField path="--since" type="string">
+  Filter from date in YYYYMMDD format. Limits results to data from this date onwards.
+  
+  <CodeGroup>
+  ```bash Short flag
+  ccusage daily -s 20240101
+  ```
+  
+  ```bash Long flag
+  ccusage daily --since 20240101
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="--until" type="string">
+  Filter until date in YYYYMMDD format. Limits results to data up to and including this date.
+  
+  <CodeGroup>
+  ```bash Short flag
+  ccusage daily -u 20240131
+  ```
+  
+  ```bash Long flag
+  ccusage daily --until 20240131
+  ```
+  </CodeGroup>
+  
+  <Note>Both `--since` and `--until` can be combined to create a date range.</Note>
+</ParamField>
+
+### Cost Calculation
+
+<ParamField path="--mode" type="enum" default="auto">
+  Control cost calculation mode:
+  
+  - `auto` - Use pre-calculated costUSD when available, otherwise calculate from tokens
+  - `calculate` - Always calculate costs from token counts using model pricing, ignore costUSD
+  - `display` - Always use pre-calculated costUSD values, show 0 for missing costs
+  
+  <CodeGroup>
+  ```bash Short flag
+  ccusage daily -m calculate
+  ```
+  
+  ```bash Long flag
+  ccusage daily --mode calculate
+  ```
+  </CodeGroup>
+  
+  <Info>The `calculate` mode is useful for verifying pricing consistency or when costUSD is missing.</Info>
+</ParamField>
+
+<ParamField path="--offline" type="boolean" default="false">
+  Use cached pricing data for Claude models instead of fetching from LiteLLM API.
+  
+  <CodeGroup>
+  ```bash Short flag
+  ccusage daily -O
+  ```
+  
+  ```bash Long flag
+  ccusage daily --offline
+  ```
+  
+  ```bash Negation
+  ccusage daily --no-offline
+  ```
+  </CodeGroup>
+  
+  <Note>Offline mode uses cached pricing data and doesn't require internet access.</Note>
+</ParamField>
+
+### Sorting
+
+<ParamField path="--order" type="enum" default="asc">
+  Sort order for results:
+  
+  - `asc` - Oldest first (chronological order)
+  - `desc` - Newest first (reverse chronological order)
+  
+  <CodeGroup>
+  ```bash Short flag
+  ccusage daily -o desc
+  ```
+  
+  ```bash Long flag
+  ccusage daily --order desc
+  ```
+  </CodeGroup>
+</ParamField>
+
+### Model Breakdown
+
+<ParamField path="--breakdown" type="boolean" default="false">
+  Show per-model cost breakdown in the output. Displays token counts and costs for each Claude model used.
+  
+  <CodeGroup>
+  ```bash Short flag
+  ccusage daily -b
+  ```
+  
+  ```bash Long flag
+  ccusage daily --breakdown
+  ```
+  </CodeGroup>
+</ParamField>
+
+### Localization
+
+<ParamField path="--timezone" type="string">
+  Timezone for date grouping (e.g., UTC, America/New_York, Asia/Tokyo). Defaults to system timezone.
+  
+  <CodeGroup>
+  ```bash Short flag
+  ccusage daily -z UTC
+  ```
+  
+  ```bash Long flag
+  ccusage daily --timezone America/New_York
+  ```
+  </CodeGroup>
+  
+  <Info>Valid timezone names follow the IANA Time Zone Database format.</Info>
+</ParamField>
+
+<ParamField path="--locale" type="string" default="en-CA">
+  Locale for date/time formatting (e.g., en-US, ja-JP, de-DE).
+  
+  <CodeGroup>
+  ```bash Short flag
+  ccusage daily -l ja-JP
+  ```
+  
+  ```bash Long flag
+  ccusage daily --locale de-DE
+  ```
+  </CodeGroup>
+</ParamField>
+
+### Configuration
+
+<ParamField path="--config" type="string">
+  Path to configuration file. Defaults to auto-discovery from standard locations.
+  
+  ```bash
+  ccusage daily --config /path/to/custom-config.json
+  ```
+  
+  <Info>See [Config Files](/configuration/config-files) for configuration file format and options.</Info>
+</ParamField>
+
+### Debugging
+
+<ParamField path="--debug" type="boolean" default="false">
+  Show pricing mismatch information for debugging. Displays discrepancies between calculated and pre-calculated costs.
+  
+  <CodeGroup>
+  ```bash Short flag
+  ccusage daily -d
+  ```
+  
+  ```bash Long flag
+  ccusage daily --debug
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="--debug-samples" type="number" default="5">
+  Number of sample discrepancies to show in debug output. Only used when `--debug` is enabled.
+  
+  ```bash
+  ccusage daily --debug --debug-samples 10
+  ```
+</ParamField>
+
+## Examples
+
+### Basic Usage
+
+```bash
+# Daily report with JSON output
+ccusage daily --json
+
+# Monthly report with model breakdown
+ccusage monthly --breakdown
+
+# Session report sorted by newest first
+ccusage session --order desc
+```
+
+### Date Range Filtering
+
+```bash
+# Usage for January 2024
+ccusage daily --since 20240101 --until 20240131
+
+# Usage from specific date onwards
+ccusage monthly --since 20240301
+```
+
+### Advanced Options
+
+```bash
+# Calculate costs with offline pricing in Tokyo timezone
+ccusage daily --mode calculate --offline --timezone Asia/Tokyo
+
+# Debug mode with custom sample count
+ccusage daily --debug --debug-samples 20
+
+# Custom config with jq filtering
+ccusage daily --config ~/.ccusage.json --jq '.[] | select(.totalCost > 5.0)'
+```
+
+### Output Customization
+
+```bash
+# Compact mode with no colors
+ccusage daily --compact --no-color
+
+# Japanese locale with UTC timezone
+ccusage monthly --locale ja-JP --timezone UTC
+```

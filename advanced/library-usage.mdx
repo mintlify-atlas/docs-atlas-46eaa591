@@ -1,0 +1,536 @@
+---
+title: Library Usage
+description: Use ccusage as a TypeScript library in your own projects
+---
+
+ccusage can be used as a library in your Node.js or TypeScript projects, providing programmatic access to Claude Code usage data and cost calculations.
+
+## Installation
+
+```bash
+npm install ccusage
+# or
+pnpm add ccusage
+# or
+yarn add ccusage
+# or
+bun add ccusage
+```
+
+## Package Exports
+
+The ccusage package provides multiple entry points:
+
+<CodeGroup>
+```typescript Main
+// CLI entry point (not typically needed for library usage)
+import 'ccusage';
+```
+
+```typescript Calculate Cost
+// Cost calculation utilities
+import { calculateTotals, getTotalTokens } from 'ccusage/calculate-cost';
+```
+
+```typescript Data Loader
+// Data loading functions
+import { 
+  loadDailyData, 
+  loadMonthlyData, 
+  loadSessionData,
+  loadBlocksData 
+} from 'ccusage/data-loader';
+```
+
+```typescript Debug
+// Debug utilities
+import { analyzePricingDiscrepancies } from 'ccusage/debug';
+```
+
+```typescript Logger
+// Logging utilities
+import { logger } from 'ccusage/logger';
+```
+</CodeGroup>
+
+## Basic Usage
+
+### Loading Daily Data
+
+```typescript
+import { loadDailyData } from 'ccusage/data-loader';
+
+// Load all daily usage data
+const dailyUsage = await loadDailyData();
+
+for (const day of dailyUsage) {
+  console.log(`${day.date}: $${day.totalCost.toFixed(4)}`);
+  console.log(`  Tokens: ${day.totalTokens}`);
+  console.log(`  Models: ${day.modelsUsed.join(', ')}`);
+}
+```
+
+### Loading with Options
+
+```typescript
+import { loadDailyData } from 'ccusage/data-loader';
+
+// Filter by date range and cost mode
+const filteredData = await loadDailyData({
+  since: '20250301',
+  until: '20250307',
+  mode: 'calculate',  // Always calculate from tokens
+  offline: false,     // Allow network access for pricing
+});
+
+console.log(`Found ${filteredData.length} days of data`);
+```
+
+## Data Loading Functions
+
+### loadDailyData
+
+Load usage data aggregated by day.
+
+```typescript
+import { loadDailyData } from 'ccusage/data-loader';
+import type { DailyUsage } from 'ccusage/data-loader';
+
+interface DailyOptions {
+  since?: string;      // Start date (YYYYMMDD)
+  until?: string;      // End date (YYYYMMDD)
+  mode?: 'auto' | 'calculate' | 'display';
+  offline?: boolean;   // Use cached pricing only
+  project?: string;    // Filter to specific project
+  instances?: boolean; // Group by project
+}
+
+const data: DailyUsage[] = await loadDailyData({
+  since: '20250301',
+  mode: 'auto'
+});
+```
+
+### loadMonthlyData
+
+Load usage data aggregated by month.
+
+```typescript
+import { loadMonthlyData } from 'ccusage/data-loader';
+import type { MonthlyUsage } from 'ccusage/data-loader';
+
+const monthlyData: MonthlyUsage[] = await loadMonthlyData({
+  mode: 'calculate'
+});
+
+for (const month of monthlyData) {
+  console.log(`${month.month}: $${month.totalCost.toFixed(2)}`);
+}
+```
+
+### loadSessionData
+
+Load usage data grouped by sessions (projects).
+
+```typescript
+import { loadSessionData } from 'ccusage/data-loader';
+import type { SessionUsage } from 'ccusage/data-loader';
+
+const sessions: SessionUsage[] = await loadSessionData({
+  mode: 'auto'
+});
+
+// Sort by cost
+const sortedSessions = sessions
+  .sort((a, b) => b.totalCost - a.totalCost)
+  .slice(0, 10);
+
+console.log('Top 10 most expensive sessions:');
+for (const session of sortedSessions) {
+  console.log(`${session.projectPath}: $${session.totalCost.toFixed(4)}`);
+}
+```
+
+### loadBlocksData
+
+Load usage data organized by 5-hour billing blocks.
+
+```typescript
+import { loadBlocksData } from 'ccusage/data-loader';
+import type { BlockUsage } from 'ccusage/data-loader';
+
+const blocks: BlockUsage[] = await loadBlocksData({
+  recent: true,  // Last 3 days
+  mode: 'auto'
+});
+
+// Find active block
+const activeBlock = blocks.find(block => block.isActive);
+if (activeBlock) {
+  console.log('Current billing block:');
+  console.log(`  Cost so far: $${activeBlock.totalCost.toFixed(4)}`);
+  console.log(`  Tokens: ${activeBlock.totalTokens}`);
+}
+```
+
+## Cost Calculation
+
+### calculateTotals
+
+Aggregate token counts and costs across multiple usage entries.
+
+```typescript
+import { calculateTotals } from 'ccusage/calculate-cost';
+import { loadDailyData } from 'ccusage/data-loader';
+
+const dailyData = await loadDailyData({
+  since: '20250301',
+  until: '20250307'
+});
+
+const totals = calculateTotals(dailyData);
+
+console.log('Week totals:');
+console.log(`  Input tokens: ${totals.inputTokens}`);
+console.log(`  Output tokens: ${totals.outputTokens}`);
+console.log(`  Cache creation: ${totals.cacheCreationTokens}`);
+console.log(`  Cache read: ${totals.cacheReadTokens}`);
+console.log(`  Total cost: $${totals.totalCost.toFixed(4)}`);
+```
+
+### getTotalTokens
+
+Sum all token types for a usage entry.
+
+```typescript
+import { getTotalTokens } from 'ccusage/calculate-cost';
+
+const tokens = {
+  inputTokens: 1000,
+  outputTokens: 500,
+  cacheCreationTokens: 200,
+  cacheReadTokens: 300
+};
+
+const total = getTotalTokens(tokens);
+console.log(`Total: ${total} tokens`); // 2000 tokens
+```
+
+## Type Definitions
+
+### Usage Data Types
+
+```typescript
+import type { 
+  DailyUsage,
+  MonthlyUsage,
+  SessionUsage,
+  BlockUsage,
+  ModelBreakdown 
+} from 'ccusage/data-loader';
+
+// Daily usage entry
+interface DailyUsage {
+  date: string;                    // YYYY-MM-DD
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+  totalCost: number;
+  modelsUsed: string[];
+  modelBreakdowns: ModelBreakdown[];
+}
+
+// Per-model breakdown
+interface ModelBreakdown {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+  totalCost: number;
+}
+```
+
+### JSON Output Types
+
+```typescript
+import type { DailyProjectOutput } from 'ccusage/_json-output-types';
+
+// From src/_json-output-types.ts
+interface DailyProjectOutput {
+  date: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+  totalTokens: number;
+  totalCost: number;
+  modelsUsed: string[];
+  modelBreakdowns: ModelBreakdown[];
+}
+```
+
+## Advanced Examples
+
+### Custom Cost Analysis
+
+```typescript
+import { loadDailyData } from 'ccusage/data-loader';
+import { calculateTotals } from 'ccusage/calculate-cost';
+
+async function analyzeCostTrends() {
+  const data = await loadDailyData({ mode: 'calculate' });
+  
+  // Group by week
+  const weeks = new Map<string, typeof data>();
+  
+  for (const day of data) {
+    const weekStart = getWeekStart(day.date);
+    if (!weeks.has(weekStart)) {
+      weeks.set(weekStart, []);
+    }
+    weeks.get(weekStart)!.push(day);
+  }
+  
+  // Calculate weekly costs
+  console.log('Weekly cost trends:');
+  for (const [week, days] of weeks) {
+    const totals = calculateTotals(days);
+    console.log(`Week of ${week}: $${totals.totalCost.toFixed(2)}`);
+  }
+}
+
+function getWeekStart(dateStr: string): string {
+  const date = new Date(dateStr);
+  const day = date.getDay();
+  const diff = date.getDate() - day;
+  const weekStart = new Date(date.setDate(diff));
+  return weekStart.toISOString().split('T')[0];
+}
+
+await analyzeCostTrends();
+```
+
+### Model Usage Analysis
+
+```typescript
+import { loadDailyData } from 'ccusage/data-loader';
+
+async function analyzeModelUsage() {
+  const data = await loadDailyData();
+  
+  // Count model usage
+  const modelStats = new Map<string, { days: number; totalCost: number }>();
+  
+  for (const day of data) {
+    for (const model of day.modelsUsed) {
+      const stats = modelStats.get(model) || { days: 0, totalCost: 0 };
+      stats.days++;
+      
+      // Find cost for this model
+      const breakdown = day.modelBreakdowns.find(b => b.model === model);
+      if (breakdown) {
+        stats.totalCost += breakdown.totalCost;
+      }
+      
+      modelStats.set(model, stats);
+    }
+  }
+  
+  console.log('Model usage statistics:');
+  for (const [model, stats] of modelStats) {
+    console.log(`${model}:`);
+    console.log(`  Used on ${stats.days} days`);
+    console.log(`  Total cost: $${stats.totalCost.toFixed(4)}`);
+    console.log(`  Avg per day: $${(stats.totalCost / stats.days).toFixed(4)}`);
+  }
+}
+
+await analyzeModelUsage();
+```
+
+### Budget Monitoring
+
+```typescript
+import { loadMonthlyData } from 'ccusage/data-loader';
+
+interface BudgetAlert {
+  month: string;
+  spent: number;
+  budget: number;
+  percentUsed: number;
+  status: 'ok' | 'warning' | 'exceeded';
+}
+
+async function checkBudget(monthlyBudget: number): Promise<BudgetAlert[]> {
+  const monthlyData = await loadMonthlyData({ mode: 'auto' });
+  
+  return monthlyData.map(month => {
+    const percentUsed = (month.totalCost / monthlyBudget) * 100;
+    
+    let status: BudgetAlert['status'] = 'ok';
+    if (percentUsed >= 100) status = 'exceeded';
+    else if (percentUsed >= 80) status = 'warning';
+    
+    return {
+      month: month.month,
+      spent: month.totalCost,
+      budget: monthlyBudget,
+      percentUsed,
+      status
+    };
+  });
+}
+
+const alerts = await checkBudget(50.00); // $50 monthly budget
+
+for (const alert of alerts) {
+  const emoji = alert.status === 'exceeded' ? '🚨' : 
+                alert.status === 'warning' ? '⚠️' : '✅';
+  
+  console.log(`${emoji} ${alert.month}: $${alert.spent.toFixed(2)} / $${alert.budget.toFixed(2)} (${alert.percentUsed.toFixed(1)}%)`);
+}
+```
+
+### Export to CSV
+
+```typescript
+import { loadDailyData } from 'ccusage/data-loader';
+import { writeFile } from 'fs/promises';
+
+async function exportToCsv(filename: string) {
+  const data = await loadDailyData();
+  
+  // CSV header
+  const header = 'Date,Input Tokens,Output Tokens,Cache Creation,Cache Read,Total Tokens,Total Cost,Models\n';
+  
+  // CSV rows
+  const rows = data.map(day => 
+    `${day.date},${day.inputTokens},${day.outputTokens},${day.cacheCreationTokens},${day.cacheReadTokens},${day.totalTokens},${day.totalCost},"${day.modelsUsed.join(', ')}"`
+  ).join('\n');
+  
+  await writeFile(filename, header + rows);
+  console.log(`Exported ${data.length} days to ${filename}`);
+}
+
+await exportToCsv('claude-usage.csv');
+```
+
+## Configuration
+
+### Custom Data Directory
+
+```typescript
+import { loadDailyData } from 'ccusage/data-loader';
+
+// Set custom directory via environment variable
+process.env.CLAUDE_CONFIG_DIR = '/path/to/custom/claude/data';
+
+const data = await loadDailyData();
+```
+
+### Multiple Directories
+
+```typescript
+// Support multiple Claude installations
+process.env.CLAUDE_CONFIG_DIR = '/path/one,/path/two';
+
+const data = await loadDailyData();
+// Aggregates data from both directories
+```
+
+### Logging
+
+```typescript
+import { logger } from 'ccusage/logger';
+
+// Set log level (0=silent, 5=trace)
+process.env.LOG_LEVEL = '4'; // debug
+
+logger.debug('Debug message');
+logger.info('Info message');
+logger.warn('Warning message');
+logger.error('Error message');
+```
+
+## Error Handling
+
+ccusage uses the `@praha/byethrow` Result type for functional error handling:
+
+```typescript
+import { loadDailyData } from 'ccusage/data-loader';
+import { Result } from '@praha/byethrow';
+
+try {
+  const data = await loadDailyData();
+  
+  if (data.length === 0) {
+    console.warn('No usage data found');
+  } else {
+    console.log(`Loaded ${data.length} days of data`);
+  }
+} catch (error) {
+  console.error('Failed to load data:', error);
+}
+```
+
+<Note>
+Most functions will return empty arrays rather than throwing errors when data is not found. Always check the length of returned arrays.
+</Note>
+
+## TypeScript Support
+
+ccusage is written in TypeScript and includes full type definitions:
+
+```typescript
+import type { 
+  DailyUsage,
+  MonthlyUsage,
+  SessionUsage,
+  BlockUsage,
+  ModelBreakdown,
+  CostMode 
+} from 'ccusage/data-loader';
+
+// All types are exported and fully typed
+const mode: CostMode = 'calculate';
+```
+
+## Performance Tips
+
+<Tabs>
+  <Tab title="Use display mode">
+    For fastest performance, use `display` mode to avoid pricing calculations:
+    
+    ```typescript
+    const data = await loadDailyData({ mode: 'display' });
+    ```
+  </Tab>
+  <Tab title="Filter dates">
+    Load only the data you need with date filters:
+    
+    ```typescript
+    const data = await loadDailyData({ 
+      since: '20250301',
+      until: '20250307' 
+    });
+    ```
+  </Tab>
+  <Tab title="Use offline mode">
+    Avoid network calls with offline mode:
+    
+    ```typescript
+    const data = await loadDailyData({ 
+      offline: true,
+      mode: 'display' 
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Related Documentation
+
+- [JSON Output Format](/advanced/json-output) - Detailed JSON structure reference
+- [Cost Calculation Modes](/advanced/cost-modes) - Understanding auto/calculate/display modes
+- [CLI Reference](/api/commands/daily) - Command-line usage examples

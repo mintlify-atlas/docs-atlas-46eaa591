@@ -1,0 +1,273 @@
+---
+title: '@ccusage/amp'
+description: Usage analyzer for Amp with credits tracking
+---
+
+# @ccusage/amp
+
+Analyze [Amp](https://ampcode.com/) session usage with the same reporting experience as ccusage. Track token usage, costs, and credits from your Amp CLI sessions with daily, monthly, and session-based reports.
+
+## What is Amp?
+
+[Amp](https://ampcode.com/) is a modern AI coding assistant CLI that uses Claude models. It features a unique credits-based billing system in addition to standard token tracking.
+
+## Quick Start
+
+<CodeGroup>
+```bash npx
+npx @ccusage/amp@latest --help
+```
+
+```bash bunx
+bunx @ccusage/amp@latest --help
+```
+
+```bash pnpm
+pnpm dlx @ccusage/amp
+```
+</CodeGroup>
+
+## Installation
+
+### Shell Alias (Recommended)
+
+Since `npx @ccusage/amp@latest` is quite long to type repeatedly, set up a shell alias:
+
+<CodeGroup>
+```bash bash/zsh
+alias ccusage-amp='bunx @ccusage/amp@latest'
+```
+
+```bash fish
+alias ccusage-amp 'bunx @ccusage/amp@latest'
+```
+</CodeGroup>
+
+Then simply run:
+
+```bash
+ccusage-amp daily
+ccusage-amp monthly --json
+```
+
+## Data Source
+
+The CLI reads Amp thread data from:
+
+- **Default**: `~/.local/share/amp/threads/`
+- **Custom**: Set `AMP_DATA_DIR` environment variable
+
+Each thread is stored as a JSON file named `T-{uuid}.json` containing:
+
+- Thread metadata (title, created timestamp)
+- Messages with usage information
+- Usage ledger with billing events
+- Credits consumed per operation
+
+## Common Commands
+
+### Daily Usage Report
+
+View token usage, costs, and credits grouped by date:
+
+```bash
+npx @ccusage/amp@latest daily
+```
+
+### Monthly Report
+
+View usage aggregated by month:
+
+```bash
+npx @ccusage/amp@latest monthly
+```
+
+### Session Report (Threads)
+
+Detailed breakdown by individual threads:
+
+```bash
+npx @ccusage/amp@latest session
+```
+
+### JSON Output
+
+Export structured data for scripting:
+
+```bash
+npx @ccusage/amp@latest daily --json
+```
+
+### Compact Mode
+
+Optimized for screenshots and narrow terminals:
+
+```bash
+npx @ccusage/amp@latest daily --compact
+```
+
+## Token Fields
+
+Amp tracks detailed token usage:
+
+| Field | Description | Billing |
+|-------|-------------|----------|
+| `inputTokens` | Total input tokens sent to model | Standard input billing |
+| `outputTokens` | Completion tokens | Output billing |
+| `cacheCreationInputTokens` | Tokens used for cache creation | Cache creation cost |
+| `cacheReadInputTokens` | Tokens read from cache | Cheaper cached billing |
+| `totalTokens` | Sum of input and output | Total token count |
+
+## Credits System
+
+Amp uses a **credits-based billing system** in addition to token counts:
+
+- Each usage event includes a `credits` field
+- Credits represent the billing cost in Amp's credit system
+- Credits are displayed alongside USD cost estimates in reports
+- Useful for tracking Amp subscription usage
+
+### Credits in Reports
+
+Both table and JSON outputs include:
+
+- **Token counts** - Standard input/output/cache tokens
+- **USD estimates** - Calculated from LiteLLM pricing
+- **Credits consumed** - Amp's billing credits
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Daily Reports" icon="calendar-day">
+    View token usage, costs, and credits aggregated by date
+  </Card>
+  
+  <Card title="Monthly Reports" icon="calendar">
+    Aggregate usage by month for budget tracking
+  </Card>
+  
+  <Card title="Thread Reports" icon="comments">
+    Detailed breakdown by individual threads (sessions)
+  </Card>
+  
+  <Card title="Credits Tracking" icon="coins">
+    Track Amp's credits-based billing alongside USD costs
+  </Card>
+  
+  <Card title="Accurate Costs" icon="dollar-sign">
+    Uses LiteLLM pricing database for accurate cost calculation
+  </Card>
+  
+  <Card title="Cache Support" icon="database">
+    Tracks cache creation and cache read tokens separately
+  </Card>
+  
+  <Card title="JSON Output" icon="code">
+    Export data in structured JSON format with --json
+  </Card>
+  
+  <Card title="Compact Mode" icon="compress">
+    Use --compact flag for narrow terminals
+  </Card>
+</CardGroup>
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|----------|
+| `AMP_DATA_DIR` | Custom Amp data directory path | `~/.local/share/amp` |
+| `LOG_LEVEL` | Control logging verbosity (0 silent … 5 trace) | - |
+
+## Data Structure
+
+Amp thread files have this structure:
+
+```json
+{
+  "id": "T-{uuid}",
+  "created": 1700000000000,
+  "title": "Thread Title",
+  "messages": [
+    {
+      "role": "assistant",
+      "messageId": 1,
+      "usage": {
+        "model": "claude-haiku-4-5-20251001",
+        "inputTokens": 100,
+        "outputTokens": 50,
+        "cacheCreationInputTokens": 500,
+        "cacheReadInputTokens": 200,
+        "credits": 1.5
+      }
+    }
+  ],
+  "usageLedger": {
+    "events": [
+      {
+        "model": "claude-haiku-4-5-20251001",
+        "credits": 1.5,
+        "tokens": {
+          "input": 100,
+          "output": 50
+        }
+      }
+    ]
+  }
+}
+```
+
+## Model Support
+
+Amp primarily uses **Anthropic Claude models**:
+
+- Claude Haiku (fast and efficient)
+- Claude Sonnet (balanced performance)
+- Claude Opus (most capable)
+
+All models are priced using LiteLLM's pricing database for accurate cost calculation.
+
+## Use Cases
+
+### Budget Tracking
+
+Track both USD costs and Amp credits over time:
+
+```bash
+ccusage-amp monthly --json > usage.json
+```
+
+### Thread Analysis
+
+Analyze individual threads to understand costs per conversation:
+
+```bash
+ccusage-amp session
+```
+
+### Credits Monitoring
+
+Monitor Amp credits consumption for subscription planning:
+
+```bash
+ccusage-amp daily
+```
+
+## Links
+
+<CardGroup cols={2}>
+  <Card title="npm Package" icon="npm" href="https://www.npmjs.com/package/@ccusage/amp">
+    View on npm registry
+  </Card>
+  
+  <Card title="Amp" icon="globe" href="https://ampcode.com/">
+    Official Amp website
+  </Card>
+  
+  <Card title="ccusage Family" icon="layer-group" href="/family/overview">
+    Explore all related tools
+  </Card>
+  
+  <Card title="Main Documentation" icon="book" href="https://ccusage.com">
+    Full ccusage documentation
+  </Card>
+</CardGroup>

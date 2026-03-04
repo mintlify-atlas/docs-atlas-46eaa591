@@ -1,0 +1,120 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "ccusage",
+  "projectDescription": "A CLI tool for analyzing Claude Code usage and costs from local JSONL files.",
+  "theme": "aspen",
+  "primaryColor": "#7C3AED",
+  "lightColor": "#A78BFA",
+  "darkColor": "#5B21B6",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/daily-reports",
+              "features/monthly-reports",
+              "features/weekly-reports",
+              "features/session-reports",
+              "features/blocks-reports",
+              "features/statusline"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/cli-options",
+              "configuration/config-files",
+              "configuration/environment-variables",
+              "configuration/custom-paths"
+            ]
+          },
+          {
+            "group": "Advanced Usage",
+            "pages": [
+              "advanced/json-output",
+              "advanced/cost-modes",
+              "advanced/mcp-server",
+              "advanced/library-usage"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Related Tools",
+        "groups": [
+          {
+            "group": "Family",
+            "pages": [
+              "family/overview",
+              "family/codex",
+              "family/opencode",
+              "family/pi",
+              "family/amp",
+              "family/mcp"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "CLI Commands",
+            "pages": [
+              "api/commands/daily",
+              "api/commands/monthly",
+              "api/commands/weekly",
+              "api/commands/session",
+              "api/commands/blocks",
+              "api/commands/statusline"
+            ]
+          },
+          {
+            "group": "Library API",
+            "pages": [
+              "api/library/data-loader",
+              "api/library/calculate-cost",
+              "api/library/logger"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Daily, monthly, weekly, and session-based usage reports",
+    "5-hour billing blocks tracking with active block monitoring",
+    "Cost calculation with multiple modes (auto/calculate/display)",
+    "JSON output format for programmatic consumption",
+    "Model Context Protocol (MCP) server integration",
+    "Per-model cost breakdown and cache token tracking",
+    "Multi-project/instance support with filtering",
+    "Custom Claude data directory paths",
+    "Timezone and locale customization",
+    "Configuration files with JSON schema validation",
+    "Statusline integration for status bar hooks",
+    "Ultra-small bundle size for fast execution"
+  ],
+  "publicApiSurface": [
+    "ccusage daily - Daily usage report",
+    "ccusage monthly - Monthly usage report",
+    "ccusage weekly - Weekly usage report",
+    "ccusage session - Session-based usage report",
+    "ccusage blocks - 5-hour billing blocks report",
+    "ccusage statusline - Compact status line display",
+    "loadDailyUsageData() - Load and parse usage data",
+    "calculateTotals() - Calculate token and cost totals",
+    "loadConfig() - Load configuration from files"
+  ]
+}
